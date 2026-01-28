@@ -53,7 +53,6 @@ npm install
 在项目根目录下，将 `.env.example` 重命名为 `.env`，并填入你的 API Key：
 - `LLM_API_KEY`: 你的大模型 API 密钥
 - `LLM_BASE_URL`: API 接口地址
-- `ZEP_API_KEY`: (可选) 用于记忆图谱存储
 
 #### **2. 启动后端服务**
 ```bash
