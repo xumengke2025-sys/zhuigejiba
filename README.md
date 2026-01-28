@@ -21,6 +21,13 @@
 - **模型**：支持 DeepSeek、GPT-4o、Qwen 等主流大模型接口
 
 ---
+系统截图
+<img width="666" height="546" alt="2848dbb24ab6ff44e8f10d5315308728" src="https://github.com/user-attachments/assets/045cbc17-be56-4e9a-95a1-290a3ce329ff" />
+<img width="663" height="1152" alt="ab3e3a9146fdeae8efdc971acf058143" src="https://github.com/user-attachments/assets/67aca780-1842-47b7-86a9-1780a7688129" />
+<img width="894" height="456" alt="733cf9b69ee708bebe59377045d649fc" src="https://github.com/user-attachments/assets/287a7d9d-c8d7-4bac-93fe-ff06dedac823" />
+<img width="996" height="1065" alt="ba117ef3f7755dbb473a0339ec7fad19" src="https://github.com/user-attachments/assets/2baa08bf-0964-40d8-a68b-1354020dbe8b" />
+<img width="1422" height="882" alt="d2841566d33b8f86ba002e8ec28dd4ac" src="https://github.com/user-attachments/assets/f08c4f44-67a0-403d-b79a-b6a955021637" />
+<img width="1509" height="1059" alt="440c401c492e7f9b7e4b45f468326e5b" src="https://github.com/user-attachments/assets/e8f6a51c-8135-4456-b2d3-a07cd38aaf8d" />
 
 ### **安装方法**
 
