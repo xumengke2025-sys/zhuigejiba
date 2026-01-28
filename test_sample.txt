@@ -1,7 +1,0 @@
-
-Alice is a software engineer who lives in Silicon Valley. She works for TechGiant, a leading technology company. 
-Bob is a product manager at TechGiant and is Alice's direct manager. 
-They are currently working on a project called "Project MiroFish", which aims to build a swarm intelligence engine.
-Alice lives in a modern apartment in Palo Alto, while Bob lives in a suburban house in Mountain View.
-TechGiant's headquarters is located in Cupertino.
-Alice and Bob often meet at a coffee shop called "The Byte" in Palo Alto to discuss project details.

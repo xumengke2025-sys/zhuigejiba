@@ -1,5 +1,5 @@
 """
-MiroFish Backend 启动入口
+万年 Backend 启动入口
 """
 
 import os
@@ -28,11 +28,12 @@ def main():
     
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
-    port = int(os.environ.get('FLASK_PORT', 5001))
+    port = int(os.environ.get('FLASK_PORT', 5002))
     debug = Config.DEBUG
     
     # 启动服务
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    # 禁用 reloader，因为后台线程会在 reloader 重启时丢失
+    app.run(host=host, port=port, debug=debug, threaded=True, use_reloader=False)
 
 
 if __name__ == '__main__':

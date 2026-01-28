@@ -1,1 +1,0 @@
-MiroFish is a project that uses Neo4j. The user had a bug with tuple attributes.

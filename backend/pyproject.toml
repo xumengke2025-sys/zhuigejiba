@@ -1,11 +1,11 @@
 [project]
-name = "mirofish-backend"
+name = "wannian-backend"
 version = "0.1.0"
-description = "MiroFish - 简洁通用的群体智能引擎，预测万物"
+description = "万年 (Wannian) - 命理推演与命运图谱系统"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0" }
 authors = [
-    { name = "MiroFish Team" }
+    { name = "Wannian Team" }
 ]
 
 dependencies = [
@@ -15,9 +15,6 @@ dependencies = [
     
     # LLM 相关
     "openai>=1.0.0",
-    
-    # 数据库
-    "neo4j>=5.0.0",
     
     # OASIS 社交媒体模拟
     "camel-oasis==0.2.5",

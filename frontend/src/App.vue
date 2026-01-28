@@ -1,9 +1,11 @@
 <template>
   <router-view />
+  <!-- 全局 Toast 通知组件 -->
+  <Toast />
 </template>
 
 <script setup>
-// 使用 Vue Router 来管理页面
+import Toast from './components/Toast.vue'
 </script>
 
 <style>
