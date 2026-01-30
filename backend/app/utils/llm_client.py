@@ -30,7 +30,7 @@ class LLMClient:
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
-            timeout=180.0
+            timeout=300.0
         )
         
         # 初始化加速模型客户端（如果有配置）
@@ -40,10 +40,10 @@ class LLMClient:
             self.boost_client = OpenAI(
                 api_key=Config.LLM_BOOST_API_KEY,
                 base_url=boost_base_url,
-                timeout=180.0
+                timeout=300.0
             )
     
-    @retry_with_backoff(max_retries=2, initial_delay=1.0, exceptions=(Exception,))
+    @retry_with_backoff(max_retries=3, initial_delay=2.0, max_delay=60.0, exceptions=(Exception,))
     def chat(
         self,
         messages: List[Dict[str, str]],

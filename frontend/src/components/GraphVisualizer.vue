@@ -58,6 +58,16 @@
           </div>
 
           <div class="legend-separator"></div>
+
+          <!-- Edge Legend -->
+          <div class="legend-item">
+            <div class="legend-line-icon"></div>
+            <div class="legend-info">
+              <div class="legend-label">推演关联</div>
+              <div class="legend-desc">事件间的逻辑与因果连线</div>
+            </div>
+          </div>
+          
           <div class="legend-item size-legend">
             <div class="size-dots">
               <div class="dot d1"></div>
@@ -148,9 +158,9 @@ const COLORS = {
 }
 
 const TYPE_CONFIG = {
-  consensus: { label: '核心共识', color: COLORS.nodeConsensus, desc: '60%以上大师达成的趋势共识' },
-  unique: { label: '独特洞察', color: COLORS.nodeUnique, desc: '特定大师的深刻见解与信号' },
-  variable: { label: '命理变数', color: COLORS.nodeVariable, desc: '预测中的不确定性或潜在转折' }
+  consensus: { label: '核心共识', color: COLORS.nodeConsensus, desc: '聚合 ≥6 位不同流派大师的共同推演结论' },
+  unique: { label: '独特洞察', color: COLORS.nodeUnique, desc: '单一大师的深度独家洞察' },
+  variable: { label: '命理变数', color: COLORS.nodeVariable, desc: '涉及重大转折或抉择的不确定性预测' }
 }
 
 const DIMENSION_CONFIG = {
@@ -160,6 +170,110 @@ const DIMENSION_CONFIG = {
   health: { label: '健康', icon: '■' }, // Square
   default: { label: '综合', icon: '★' }  // Star
 }
+
+// --- Animal Nebula Shapes ---
+  // High-fidelity point maps. Coordinates are relative grid units.
+  // "Phantom Nebula" particles will flesh these out to make them instantly recognizable.
+  const ANIMAL_SHAPES = {
+    phoenix: [
+      // --- PHOENIX (Centered Y-0.65) ---
+      // Head & Crest
+      { x: 0, y: -2.65 }, { x: 0.3, y: -2.85 }, { x: -0.2, y: -2.75 }, 
+      { x: 0, y: -2.15 }, { x: 0.5, y: -2.25 },
+      // Neck
+      { x: 0, y: -1.65 },
+      // Body Core
+      { x: 0, y: -0.65 }, { x: 0.4, y: -0.85 }, { x: -0.4, y: -0.85 }, { x: 0, y: -0.15 },
+      // Left Wing
+      { x: -0.8, y: -1.45 }, { x: -1.5, y: -1.85 }, { x: -2.5, y: -2.15 }, { x: -3.2, y: -2.45 },
+      { x: -1.2, y: -0.85 }, { x: -2.0, y: -1.15 }, { x: -2.8, y: -1.45 },
+      { x: -0.8, y: -0.45 }, { x: -1.5, y: -0.15 }, { x: -2.2, y: 0.15 },
+      // Right Wing
+      { x: 0.8, y: -1.45 }, { x: 1.5, y: -1.85 }, { x: 2.5, y: -2.15 }, { x: 3.2, y: -2.45 },
+      { x: 1.2, y: -0.85 }, { x: 2.0, y: -1.15 }, { x: 2.8, y: -1.45 },
+      { x: 0.8, y: -0.45 }, { x: 1.5, y: -0.15 }, { x: 2.2, y: 0.15 },
+      // Tail
+      { x: 0, y: 0.55 }, 
+      { x: -0.3, y: 1.15 }, { x: -0.8, y: 1.85 }, { x: -1.2, y: 2.35 },
+      { x: 0.3, y: 1.15 }, { x: 0.8, y: 1.85 }, { x: 1.2, y: 2.35 },
+      { x: 0, y: 1.35 }, { x: 0, y: 2.15 }, { x: 0, y: 2.85 }
+    ],
+    butterfly: [
+      // --- BUTTERFLY (Centered Y-0.35) ---
+      // Body Axis
+      { x: 0, y: -0.85 }, { x: 0, y: -0.35 }, { x: 0, y: 0.15 }, { x: 0, y: 0.65 },
+      // Head & Antennae
+      { x: 0, y: -1.15 }, 
+      { x: -0.3, y: -1.55 }, { x: -0.6, y: -1.95 }, { x: -0.7, y: -2.15 },
+      { x: 0.3, y: -1.55 }, { x: 0.6, y: -1.95 }, { x: 0.7, y: -2.15 },
+      // Top Left Wing
+      { x: -0.5, y: -1.15 }, { x: -1.2, y: -1.85 }, { x: -2.0, y: -2.15 }, { x: -2.8, y: -1.85 },
+      { x: -2.5, y: -0.85 }, { x: -1.5, y: -0.55 },
+      // Top Right Wing
+      { x: 0.5, y: -1.15 }, { x: 1.2, y: -1.85 }, { x: 2.0, y: -2.15 }, { x: 2.8, y: -1.85 },
+      { x: 2.5, y: -0.85 }, { x: 1.5, y: -0.55 },
+      // Bottom Left Wing
+      { x: -0.5, y: 0.15 }, { x: -1.5, y: 0.45 }, { x: -2.2, y: 1.15 }, { x: -1.8, y: 1.85 },
+      { x: -1.0, y: 2.15 }, { x: -0.5, y: 1.15 },
+      // Bottom Right Wing
+      { x: 0.5, y: 0.15 }, { x: 1.5, y: 0.45 }, { x: 2.2, y: 1.15 }, { x: 1.8, y: 1.85 },
+      { x: 1.0, y: 2.15 }, { x: 0.5, y: 1.15 }
+    ],
+    rabbit: [
+      // --- RABBIT (Centered Y+0.65) ---
+      // Head
+      { x: -1.0, y: 0.15 }, { x: -1.4, y: 0.45 }, { x: -0.8, y: 0.45 },
+      // Ears
+      { x: -1.2, y: -0.35 }, { x: -1.4, y: -1.15 }, { x: -1.5, y: -1.85 },
+      { x: -0.8, y: -0.35 }, { x: -0.6, y: -1.15 }, { x: -0.5, y: -1.85 },
+      // Body
+      { x: -0.5, y: 0.85 }, { x: 0, y: 0.45 }, { x: 0.5, y: 0.35 }, { x: 1.0, y: 0.65 },
+      { x: 1.2, y: 1.15 }, { x: 0.8, y: 1.45 }, { x: 0.2, y: 1.45 },
+      // Front Paws
+      { x: -0.8, y: 1.45 }, { x: -1.0, y: 1.85 },
+      // Hind Legs
+      { x: 1.0, y: 1.65 }, { x: 1.4, y: 1.85 }, { x: 1.4, y: 1.15 },
+      // Tail
+      { x: 1.6, y: 0.85 }, { x: 1.8, y: 1.05 }
+    ],
+    sheep: [
+      // --- SHEEP HEAD (Centered Y+0.15) ---
+      // Face
+      { x: 0, y: 1.35 }, // Chin
+      { x: -0.5, y: -0.35 }, { x: 0.5, y: -0.35 }, // Forehead
+      { x: -0.3, y: 0.65 }, { x: 0.3, y: 0.65 }, // Muzzle
+      { x: 0, y: -0.05 }, // Nose bridge
+      // Eyes
+      { x: -0.6, y: -0.05 }, { x: 0.6, y: -0.05 },
+      // Horns
+      { x: -0.6, y: -0.65 }, { x: -1.0, y: -1.35 }, { x: -1.8, y: -1.05 },
+      { x: -2.2, y: -0.35 }, { x: -2.0, y: 0.35 }, { x: -1.5, y: 0.65 },
+      
+      { x: 0.6, y: -0.65 }, { x: 1.0, y: -1.35 }, { x: 1.8, y: -1.05 },
+      { x: 2.2, y: -0.35 }, { x: 2.0, y: 0.35 }, { x: 1.5, y: 0.65 },
+      // Ears
+      { x: -1.2, y: -0.05 }, { x: -1.6, y: 0.15 },
+      { x: 1.2, y: -0.05 }, { x: 1.6, y: 0.15 }
+    ],
+    dolphin: [
+      // --- DOLPHIN (Centered Y-0.2) ---
+      // Body Arc
+      { x: -1.5, y: 0.3 }, { x: -0.5, y: -0.2 }, { x: 0.5, y: -0.4 }, { x: 1.5, y: -0.2 }, { x: 2.2, y: 0.3 },
+      // Belly Line
+      { x: -0.5, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 1.2, y: 0.2 },
+      // Dorsal Fin
+      { x: 0, y: -0.4 }, { x: 0.2, y: -1.2 }, { x: 0.5, y: -0.4 },
+      // Head
+      { x: -1.8, y: 0.5 }, { x: -2.2, y: 0.7 }, { x: -2.5, y: 0.8 },
+      { x: -1.8, y: 0.1 },
+      // Pectoral Fin
+      { x: -0.8, y: 0.6 }, { x: -0.6, y: 1.2 },
+      // Tail Flukes
+      { x: 2.8, y: 0.0 }, 
+      { x: 3.3, y: -0.5 }, 
+      { x: 3.3, y: 0.5 }
+    ]
+  }
 
 const getTypeLabel = (rawType) => {
   const t = rawType?.toLowerCase() || ''
@@ -176,7 +290,7 @@ const initWorld = () => {
   const height = container.value.clientHeight
 
   // Initialize Nodes with Time-River Layout
-  const YEAR_SPACING = 600 // Pixels per year
+  const YEAR_SPACING = 1000 // Pixels per year
   
   // Calculate dynamic time range
   if (props.minYear && props.maxYear) {
@@ -205,14 +319,14 @@ const initWorld = () => {
     const p = n.properties || {}
     const type = p.type?.toLowerCase() || 'consensus'
     let color = COLORS.nodeConsensus
-    let radius = 5
+    let radius = 8 // 共识节点更突出
 
     if (type === 'unique' || type === 'insight') {
       color = COLORS.nodeUnique
-      radius = 7
+      radius = 6
     } else if (type === 'variable') {
       color = COLORS.nodeVariable
-      radius = 6
+      radius = 5
     }
 
     // Parse Year
@@ -272,21 +386,89 @@ const initWorld = () => {
     color: ['#FFF', '#D0EFFF', '#FFEBD0', '#FFD0D0'][Math.floor(Math.random() * 4)]
   }))
 
-  // Initialize Nebula Clouds along the timeline
-  const nebulaColors = [
-    'rgba(74, 158, 255, 0.08)',
-    'rgba(255, 0, 255, 0.05)',
-    'rgba(0, 242, 255, 0.06)',
-    'rgba(138, 43, 226, 0.04)'
-  ]
-  const numClouds = Math.max(15, (maxYearRef.value - minYearRef.value) + 5)
-  nebulaClouds = Array.from({ length: numClouds }, (_, i) => ({
-    x: (i * YEAR_SPACING) - 2000 + (Math.random() - 0.5) * 1500,
-    y: (Math.random() - 0.5) * 2000,
-    size: 1000 + Math.random() * 1500,
-    color: nebulaColors[Math.floor(Math.random() * nebulaColors.length)],
-    parallax: 0.1 + Math.random() * 0.2
-  }))
+  // Initialize Nebula Clouds (Phantom shapes to reinforce animal outlines)
+  // Instead of random clouds, these will also flock to the animal coordinates
+  nebulaClouds = []
+  
+  const animalKeys = Object.keys(ANIMAL_SHAPES)
+  
+  // Create phantom particles for each year
+  for (let y = minYearRef.value; y <= maxYearRef.value; y++) {
+    const yearX = (y - minYearRef.value) * YEAR_SPACING
+    const animalIndex = y % animalKeys.length
+    const animalKey = animalKeys[animalIndex]
+    const shapePoints = ANIMAL_SHAPES[animalKey]
+    
+    // Create ~40 particles per year to "flesh out" the animal
+    const particlesPerYear = 40
+    
+    for (let i = 0; i < particlesPerYear; i++) {
+      const point = shapePoints[i % shapePoints.length]
+      const NODE_SCALE = 120
+      
+      // Jitter for nebula is higher to create volume/cloud effect
+      const jitterX = (Math.random() - 0.5) * 80
+      const jitterY = (Math.random() - 0.5) * 80
+      
+      const tx = yearX + (point.x * NODE_SCALE) + jitterX
+      const ty = (point.y * NODE_SCALE) + jitterY
+      
+      nebulaClouds.push({
+        x: tx, 
+        y: ty,
+        targetX: tx,
+        targetY: ty,
+        size: 60 + Math.random() * 100, // Small cloud puffs
+        color: 'rgba(74, 158, 255, 0.03)', // Subtle blue mist
+        parallax: 1.0 // Move with the world (not background)
+      })
+    }
+  }
+
+  // --- Arrange Nodes into Animal Shapes ---
+  
+  // Group nodes by year
+  const nodesByYear = {}
+  nodes.forEach(n => {
+    if (!nodesByYear[n.parsedYear]) nodesByYear[n.parsedYear] = []
+    nodesByYear[n.parsedYear].push(n)
+  })
+
+  // Assign positions based on animal shapes
+  Object.keys(nodesByYear).forEach(year => {
+    const yearNodes = nodesByYear[year]
+    if (yearNodes.length === 0) return
+
+    const yearNum = parseInt(year)
+    const yearX = (yearNum - minYearRef.value) * YEAR_SPACING
+    
+    // Pick a deterministic random animal for this year (so it doesn't change on re-render)
+    const animalIndex = yearNum % animalKeys.length
+    const animalKey = animalKeys[animalIndex]
+    const shapePoints = ANIMAL_SHAPES[animalKey]
+    
+    // Scale for node distribution (larger than nebula points)
+    const NODE_SCALE = 120 
+    
+    yearNodes.forEach((node, i) => {
+      // Map node to a shape point
+      // If we have more nodes than points, cycle through them
+      // If we have fewer, we just use the first N points
+      const pointIndex = i % shapePoints.length
+      const point = shapePoints[pointIndex]
+      
+      // Add jitter so nodes don't stack perfectly on top of each other
+      const jitterX = (Math.random() - 0.5) * 5
+      const jitterY = (Math.random() - 0.5) * 5
+      
+      node.targetX = yearX + (point.x * NODE_SCALE) + jitterX
+      node.targetY = (point.y * NODE_SCALE) + jitterY
+      
+      // Initial position (fly in)
+      node.x = node.targetX + (Math.random() - 0.5) * 1000
+      node.y = node.targetY + (Math.random() - 0.5) * 1000
+    })
+  })
   
   // Reset Camera to start
   camera.x = 0
@@ -299,7 +481,7 @@ const initWorld = () => {
 
 const updatePhysics = () => {
   // 1. Repulsion (Local separation)
-  const repulsion = 2000
+  const repulsion = 800
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i]
@@ -309,7 +491,7 @@ const updatePhysics = () => {
       const distSq = dx*dx + dy*dy + 0.1
       
       // Only repel if close
-      if (distSq < 100000) { 
+      if (distSq < 20000) { 
         const dist = Math.sqrt(distSq)
         const force = repulsion / distSq
         const fx = (dx / dist) * force
@@ -340,16 +522,17 @@ const updatePhysics = () => {
     edge.target.vy -= fy
   })
 
-  // 3. Timeline Gravity (Pull to Target Year X) & Center Y
-  const yearGravity = 0.02
-  const centerYGravity = 0.001
+  // 3. Timeline Gravity (Pull to Target Year X & Shape Y)
+  const shapeGravity = 0.08
   
   nodes.forEach(node => {
-    // Pull x towards target year
-    node.vx += (node.targetX - node.x) * yearGravity
+    // Pull x towards target year/shape X
+    node.vx += (node.targetX - node.x) * shapeGravity
     
-    // Pull y towards center (0) loosely
-    node.vy -= node.y * centerYGravity
+    // Pull y towards target shape Y
+    // Default to 0 if no targetY set
+    const targetY = node.targetY !== undefined ? node.targetY : 0
+    node.vy += (targetY - node.y) * shapeGravity
     
     // Interaction Scale
     const distToCam = Math.abs(node.x - camera.x)
@@ -404,6 +587,10 @@ const draw = () => {
   // 1.5. Draw Nebula Clouds (Atmospheric Gas)
   ctx.globalCompositeOperation = 'screen'
   nebulaClouds.forEach(cloud => {
+    // Apply simple physics to clouds too (drift to target)
+    cloud.x += (cloud.targetX - cloud.x) * 0.05
+    cloud.y += (cloud.targetY - cloud.y) * 0.05
+    
     const sx = (cloud.x - camera.x * cloud.parallax) * camera.zoom + cx
     const sy = (cloud.y - camera.y * cloud.parallax) * camera.zoom + cy
     const size = cloud.size * camera.zoom
@@ -412,7 +599,7 @@ const draw = () => {
     if (sx + size > 0 && sx - size < width && sy + size > 0 && sy - size < height) {
       const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, size)
       grad.addColorStop(0, cloud.color)
-      grad.addColorStop(0.5, cloud.color.replace('0.', '0.02'))
+      grad.addColorStop(0.5, cloud.color.replace('0.03', '0.01'))
       grad.addColorStop(1, 'transparent')
       
       ctx.fillStyle = grad
@@ -431,7 +618,7 @@ const draw = () => {
   ctx.translate(-camera.x, -camera.y)
 
   // 1.8. Draw Timeline Guides (Year Markers)
-  const YEAR_SPACING = 600
+  const YEAR_SPACING = 1000
   
   ctx.font = '300 100px "Rajdhani"'
   ctx.textAlign = 'center'
@@ -721,7 +908,7 @@ const handleWindowDrag = (e) => {
   lastMouse = { x: e.clientX, y: e.clientY }
 
   // Sync Timeline Slider (Passive sync)
-  const YEAR_SPACING = 600
+  const YEAR_SPACING = 1000
   const currentYear = (camera.x / YEAR_SPACING) + minYearRef.value
   const clampedYear = Math.max(minYearRef.value, Math.min(maxYearRef.value, currentYear))
   
@@ -781,7 +968,7 @@ const handleWheel = (e) => {
   camera.targetY = wy - my / newZoom
 
   // 5. Sync Timeline Focus (Slider) to new center
-  const YEAR_SPACING = 600
+  const YEAR_SPACING = 1000
   const centerYear = (camera.targetX / YEAR_SPACING) + minYearRef.value
   
   isInternalUpdate = true
@@ -824,26 +1011,11 @@ watch(timelineFocus, (newVal) => {
   // If update came from dragging, don't trigger camera animation
   if (isInternalUpdate || isDragging) return
 
-  const YEAR_SPACING = 600
+  const YEAR_SPACING = 1000
   const targetX = (newVal - minYearRef.value) * YEAR_SPACING
   
-  // Smoothly move camera
-  const duration = 800
-  const startX = camera.x
-  const startTime = Date.now()
-  
-  const animate = () => {
-    if (isDragging || isInternalUpdate) return
-
-    const elapsed = Date.now() - startTime
-    const progress = Math.min(1, elapsed / duration)
-    const ease = 1 - Math.pow(1 - progress, 3)
-    
-    camera.x = startX + (targetX - startX) * ease
-    
-    if (progress < 1) requestAnimationFrame(animate)
-  }
-  animate()
+  // Update target directly, render loop handles easing
+  camera.targetX = targetX
 })
 
 </script>
@@ -1019,6 +1191,25 @@ watch(timelineFocus, (newVal) => {
   justify-content: center;
   font-size: 10px;
   opacity: 0.8;
+}
+
+.legend-line-icon {
+  width: 14px;
+  height: 1px;
+  background: rgba(74, 158, 255, 0.8);
+  box-shadow: 0 0 5px rgba(74, 158, 255, 0.8);
+  position: relative;
+}
+.legend-line-icon::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  background: #FFF;
+  border-radius: 50%;
+  transform: translateX(-50%);
 }
 
 .legend-glow {

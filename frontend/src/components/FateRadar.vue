@@ -2,9 +2,15 @@
   <div class="radar-container" ref="container">
     <div class="radar-header">
       <div class="radar-legend">
-        <div class="legend-item"><span class="dot consensus"></span> 众师共识</div>
-        <div class="legend-item"><span class="dot unique"></span> 独特视角</div>
-        <div class="legend-item"><span class="dot variable"></span> 命理变数</div>
+        <div class="legend-item" title="标准：聚合 ≥6 位不同流派大师的共同推演结论">
+          <span class="dot consensus"></span> 众师共识 <span class="info-icon">?</span>
+        </div>
+        <div class="legend-item" title="标准：单一大师的深度独家洞察">
+          <span class="dot unique"></span> 独特视角 <span class="info-icon">?</span>
+        </div>
+        <div class="legend-item" title="标准：涉及重大转折或抉择的不确定性预测">
+          <span class="dot variable"></span> 命理变数 <span class="info-icon">?</span>
+        </div>
       </div>
       <div class="radar-controls">
         <button v-for="year in availableYears" 
@@ -17,7 +23,15 @@
       <div class="radar-title">赛博天机仪 · 年度推演拟合</div>
     </div>
     
-    <svg ref="svg" class="radar-svg" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet" @click="selectedNode = null">
+    <svg ref="svg" class="radar-svg" 
+         :viewBox="viewBoxString" 
+         preserveAspectRatio="xMidYMid meet" 
+         @click="handleSvgClick"
+         @wheel="handleWheel"
+         @mousedown="startDrag"
+         @mousemove="onDrag"
+         @mouseup="stopDrag"
+         @mouseleave="stopDrag">
       <defs>
         <!-- 基础发光 -->
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -125,7 +139,12 @@
                   :class="['node-circle', node.type, { 'is-selected': selectedNode?.id === node.id }]" 
                   :filter="node.type === 'consensus' ? 'url(#glow)' : ''" />
           
-          <text class="node-label" y="22">{{ node.name }}</text>
+          <text class="node-label" 
+                :x="node.labelX" 
+                :y="node.labelY"
+                :style="{ textAnchor: node.textAnchor }">
+            {{ node.name }}
+          </text>
           
           <!-- 观点连线 -->
           <line class="source-line" x1="0" y1="0" :x2="-node.x*0.1" :y2="-node.y*0.1" />
@@ -208,6 +227,116 @@ const hoveredNode = ref(null)
 const selectedNode = ref(null)
 const currentYear = ref(null)
 const tooltipStyle = ref({ top: '0px', left: '0px' })
+
+// --- Zoom & Pan Logic ---
+const viewBox = ref({ x: 0, y: 0, w: 600, h: 600 })
+const isDragging = ref(false)
+const startPanPos = ref({ x: 0, y: 0 })
+const wasDragging = ref(false)
+
+const viewBoxString = computed(() => 
+  `${viewBox.value.x} ${viewBox.value.y} ${viewBox.value.w} ${viewBox.value.h}`
+)
+
+const handleWheel = (e) => {
+  e.preventDefault()
+  const svgRect = e.currentTarget.getBoundingClientRect()
+  const scale = e.deltaY > 0 ? 1.1 : 0.9
+  
+  // Limit zoom
+  const newW = viewBox.value.w * scale
+  const newH = viewBox.value.h * scale
+  if (newW < 100 || newW > 2000) return
+
+  // Mouse position relative to SVG element (0 to width/height)
+  const mx = e.clientX - svgRect.left
+  const my = e.clientY - svgRect.top
+  
+  // Convert mouse position to viewBox coordinates
+  const mouseVbX = viewBox.value.x + (mx / svgRect.width) * viewBox.value.w
+  const mouseVbY = viewBox.value.y + (my / svgRect.height) * viewBox.value.h
+  
+  // Calculate new viewBox x/y to keep mouse position stable
+  viewBox.value.x = mouseVbX - (mx / svgRect.width) * newW
+  viewBox.value.y = mouseVbY - (my / svgRect.height) * newH
+  viewBox.value.w = newW
+  viewBox.value.h = newH
+}
+
+const startDrag = (e) => {
+  // Only left click
+  if (e.button !== 0) return
+  isDragging.value = true
+  wasDragging.value = false
+  startPanPos.value = { x: e.clientX, y: e.clientY }
+  if (container.value) container.value.style.cursor = 'grabbing'
+}
+
+const onDrag = (e) => {
+  if (!isDragging.value) return
+  
+  const dx = e.clientX - startPanPos.value.x
+  const dy = e.clientY - startPanPos.value.y
+  
+  if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+    wasDragging.value = true
+  }
+  
+  const svgElement = container.value.querySelector('svg')
+  if (!svgElement) return
+  const svgRect = svgElement.getBoundingClientRect()
+  
+  // Convert screen pixels to viewBox units
+  const scaleX = viewBox.value.w / svgRect.width
+  const scaleY = viewBox.value.h / svgRect.height
+  
+  viewBox.value.x -= dx * scaleX
+  viewBox.value.y -= dy * scaleY
+  
+  startPanPos.value = { x: e.clientX, y: e.clientY }
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  if (container.value) {
+    container.value.style.cursor = 'default'
+  }
+}
+
+const handleSvgClick = () => {
+  if (!wasDragging.value) {
+    selectedNode.value = null
+  }
+}
+
+const zoomIn = () => {
+  const scale = 0.8
+  const cx = viewBox.value.x + viewBox.value.w / 2
+  const cy = viewBox.value.y + viewBox.value.h / 2
+  const newW = viewBox.value.w * scale
+  const newH = viewBox.value.h * scale
+  viewBox.value.x = cx - newW / 2
+  viewBox.value.y = cy - newH / 2
+  viewBox.value.w = newW
+  viewBox.value.h = newH
+}
+
+const zoomOut = () => {
+  const scale = 1.25
+  const cx = viewBox.value.x + viewBox.value.w / 2
+  const cy = viewBox.value.y + viewBox.value.h / 2
+  const newW = viewBox.value.w * scale
+  const newH = viewBox.value.h * scale
+  if (newW > 2000) return
+  viewBox.value.x = cx - newW / 2
+  viewBox.value.y = cy - newH / 2
+  viewBox.value.w = newW
+  viewBox.value.h = newH
+}
+
+const resetZoom = () => {
+  viewBox.value = { x: 0, y: 0, w: 600, h: 600 }
+}
 
 const getTypeText = (type) => {
   const map = {
@@ -326,6 +455,33 @@ const filteredNodes = computed(() => {
       const spiralRadius = baseRadiusMin + (baseRadiusMax - baseRadiusMin) * radiusProgress
       const radiusJitter = ((hash % 20) - 10) * 0.25
       const radius = spiralRadius + radiusJitter
+
+      // 计算标签位置：让标签沿半径方向向外偏移，并根据角度调整对齐方式
+      const labelDist = node.radius + 12
+      const labelX = Math.cos(angle) * labelDist
+      const labelY = Math.sin(angle) * labelDist + 4 // 垂直微调
+
+      // 根据象限决定文字锚点
+      let textAnchor = 'middle'
+      const angleDeg = (angle * 180 / Math.PI) % 360
+      const normalizedAngle = angleDeg < 0 ? angleDeg + 360 : angleDeg
+
+      if (normalizedAngle > 20 && normalizedAngle < 160) {
+        // 下方区域
+        textAnchor = 'middle'
+      } else if (normalizedAngle >= 160 && normalizedAngle <= 200) {
+        // 左侧
+        textAnchor = 'end'
+      } else if (normalizedAngle > 200 && normalizedAngle < 340) {
+        // 上方
+        textAnchor = 'middle'
+      } else {
+        // 右侧
+        textAnchor = 'start'
+      }
+
+      // 额外的交错偏移逻辑，防止同角度的标签重叠
+      const staggerY = (localIndex % 2 === 0) ? 0 : (normalizedAngle > 180 ? -12 : 12)
       
       return {
         id: node.id,
@@ -339,7 +495,10 @@ const filteredNodes = computed(() => {
         dimension: dimension,
         radius: normalizedType === 'consensus' ? (impact * 0.8 + 5) : (impact * 0.6 + 4),
         x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius
+        y: Math.sin(angle) * radius,
+        labelX: labelX,
+        labelY: labelY + staggerY,
+        textAnchor: textAnchor
       }
     })
 })
@@ -456,10 +615,65 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
+.zoom-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 8px;
+}
+
+.control-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #888;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFF;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 .legend-item {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: help;
+  position: relative;
+  transition: color 0.3s;
+}
+
+.legend-item:hover {
+  color: #FFF;
+}
+
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 2px;
+}
+
+.legend-item:hover .info-icon {
+  border-color: #FFD700;
+  color: #FFD700;
 }
 
 .dot {
