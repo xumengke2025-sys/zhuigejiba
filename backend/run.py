@@ -17,10 +17,13 @@ def main():
     # 验证配置
     errors = Config.validate()
     if errors:
-        print("配置错误:")
+        print("\n" + "="*50)
+        print("❌ 启动失败: 配置缺失")
         for err in errors:
             print(f"  - {err}")
-        print("\n请检查 .env 文件中的配置")
+        print("\n请确保根目录下的 .env 文件已正确配置。")
+        print("可以参考 .env.example 文件进行创建。")
+        print("="*50 + "\n")
         sys.exit(1)
     
     # 创建应用
