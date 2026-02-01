@@ -615,9 +615,18 @@ const handleAnalyze = async () => {
       status.value = 'processing'
       startPolling()
       startTipRotation()
+    } else {
+      // 处理后端返回的 success: false 错误
+      toast.error(res.error || '启动失败', res.hint || '请检查输入信息')
     }
   } catch (err) {
-    toast.error('启动失败', err.message)
+    // 处理 HTTP 错误 (400, 500 等)
+    const errorData = err.response?.data
+    const errorMessage = errorData?.error || '服务器连接失败'
+    const errorHint = errorData?.hint || (err.response?.status === 404 ? '接口不存在' : '请稍后重试')
+    
+    toast.error(errorMessage, errorHint)
+    console.error('Analysis failed:', err)
   } finally {
     loading.value = false
   }
