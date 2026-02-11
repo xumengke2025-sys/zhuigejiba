@@ -31,44 +31,50 @@
 
 ---
 
-### 🚀 怎么用？（超简单版）
+### 🚀 怎么用？（小白保姆级教程）
 
-只要三步，就可以在你的电脑上跑起来！
+为了保证项目轻量，我们上传时去掉了庞大的运行库。**第一次使用**需要按照以下步骤“一键恢复”：
 
-#### 1. 准备工作
-确保你的电脑上安装了基础工具：
-*   **Python** (建议 3.10 或以上)
-*   **Node.js**
+#### 1. 环境准备
+如果你的电脑还没装过运行环境，请先下载并安装：
+*   **Python (3.10+)**: [官网下载地址](https://www.python.org/downloads/)（安装时请务必勾选 **"Add Python to PATH"**）
+*   **Node.js**: [官网下载地址](https://nodejs.org/)（下载 LTS 长期支持版即可）
 
-#### 2. 一键安装
-下载本项目后，在文件夹里打开终端（CMD 或 PowerShell），输入这一行命令并回车：
+#### 2. 一键恢复环境 (只需运行一次)
+下载本项目解压后，在文件夹地址栏输入 `cmd` 并回车，在弹出的黑色窗口中分别执行：
 
+**恢复后端环境：**
 ```bash
-npm run setup
+cd backend
+python -m venv .venv          # 创建虚拟环境
+.\.venv\Scripts\activate      # 激活环境
+pip install -r requirements.txt # 安装所有 Python 插件
+cd ..
 ```
 
-系统会自动帮你把所有需要的东西都装好。
+**恢复前端环境：**
+```bash
+cd frontend
+npm install                   # 安装所有前端插件
+cd ..
+```
 
-#### 3. 填入“钥匙” (API Key)
-本项目基于大模型（AI）运行，所以需要一个 API Key。
-1.  在文件夹里找到 `.env.example` 文件。
-2.  把它重命名为 `.env`。
-3.  用记事本打开，填入你的 API Key（推荐使用 DeepSeek-V3 模型，便宜又聪明）：
-
+#### 3. 配置 AI 钥匙 (API Key)
+本项目需要 AI 才能理解小说内容：
+1.  找到 `.env.example` 文件，改名为 `.env`。
+2.  用记事本打开，填入你的 API Key：
 ```ini
-LLM_API_KEY=sk-xxxxxxxxxxxxxx
-LLM_BASE_URL=https://api.deepseek.com
+LLM_API_KEY=你的sk-密钥
+LLM_BASE_URL=https://api.deepseek.com # 或者你使用的中转地址
 LLM_MODEL_NAME=deepseek-chat
 ```
 
-#### 4. 启动！
-在终端输入：
-
+#### 4. 启动运行
+以后每次使用，只需运行：
 ```bash
 npm run dev
 ```
-
-看到 `Local: http://localhost:xxxx` 字样后，用浏览器打开那个地址，就开始你的追迹之旅吧！
+看到屏幕显示 `Local: http://localhost:5173/` 后，按住 `Ctrl` 点击链接，或手动复制到浏览器打开即可！
 
 ---
 
