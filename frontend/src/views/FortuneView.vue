@@ -3,17 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">万年 · WANNIAN</div>
-        <!-- 防命薄机制 -->
-        <label class="fate-shield-toggle" :class="{ disabled: sessionId }">
-          <input 
-            type="checkbox" 
-            v-model="fateShieldEnabled" 
-            :disabled="!!sessionId"
-            @change="handleFateShieldChange"
-          />
-          <span class="toggle-label">防命薄机制</span>
-        </label>
+        <div class="brand" @click="resetSession">衣鱼 · SILVERFISH</div>
       </div>
       <div class="header-right">
         <div class="status-badge" v-if="sessionId">
@@ -24,48 +14,71 @@
     </header>
 
     <main class="content-container">
-      <!-- Left: Input & Masters -->
-      <div class="left-panel">
-        <div class="input-card" v-if="!sessionId || status === 'processing'">
-          <h2 class="section-title">输入出生信息</h2>
-          <div class="form-grid">
-            <div class="form-item">
-              <label>用户姓名</label>
-              <input type="text" v-model="formData.name" placeholder="请输入您的姓名" :disabled="loading" />
+      <!-- Left: Input & Experts -->
+      <div class="left-panel" v-if="status !== 'completed'">
+        <div class="input-card" v-if="!sessionId">
+          <h2 class="section-title">文本关系梳理</h2>
+          
+          <!-- 文件上传区 -->
+          <div 
+            class="upload-area" 
+            :class="{ 'is-dragover': isDragOver, 'has-file': file }"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="handleDrop"
+            @click="triggerFileInput"
+          >
+            <input 
+              type="file" 
+              ref="fileInput" 
+              class="hidden-input" 
+              accept=".txt" 
+              @change="handleFileChange" 
+            />
+            
+            <div v-if="!file" class="upload-placeholder">
+              <span class="upload-icon">📄</span>
+              <p>点击或拖拽 TXT 文件到此处</p>
+              <span class="sub-text">支持长篇小说、剧本、传记</span>
             </div>
-            <div class="form-item">
-              <label>公历生日</label>
-              <input type="date" v-model="formData.birthday" :disabled="loading" />
-            </div>
-            <div class="form-item">
-              <label>出生时间</label>
-              <input type="time" v-model="formData.birth_time" :disabled="loading" />
-            </div>
-            <div class="form-item">
-              <label>出生地点</label>
-              <input type="text" v-model="formData.birth_location" placeholder="例如：北京" :disabled="loading" />
-            </div>
-            <div class="form-item">
-              <label>性别</label>
-              <select v-model="formData.gender" :disabled="loading">
-                <option value="男">男</option>
-                <option value="女">女</option>
-              </select>
-            </div>
-            <div class="form-item">
-              <label>预测未来年数</label>
-              <input type="number" v-model="formData.future_years" min="1" max="20" :disabled="loading" />
+            
+            <div v-else class="file-info">
+              <span class="file-icon">📑</span>
+              <div class="file-details">
+                <span class="file-name">{{ file.name }}</span>
+                <span class="file-size">{{ formatSize(file.size) }}</span>
+              </div>
+              <button class="remove-file" @click.stop="file = null">×</button>
             </div>
           </div>
-          <button class="start-btn" @click="handleAnalyze" :disabled="loading || !isFormValid">
-            {{ loading ? '推演启动中...' : '启动 49 位大师并行推演' }}
+
+          <button class="start-btn" @click="handleAnalyze" :disabled="loading || !file">
+            {{ loading ? '正在启动...' : '开始梳理人物关系' }}
           </button>
         </div>
 
-        <!-- Master Hall -->
+        <!-- 运行中状态展示 -->
+        <div class="analysis-running-card" v-else-if="status === 'processing' || status === 'aggregating'">
+          <div class="running-header">
+            <div class="running-icon">⚙️</div>
+            <h3>正在分析文本</h3>
+          </div>
+          <div class="file-summary">
+            <span class="label">当前文件:</span>
+            <span class="value">{{ file?.name }}</span>
+          </div>
+          <div class="running-tips">
+             <transition name="fade" mode="out-in">
+               <p :key="currentTipIndex">{{ tips[currentTipIndex] }}</p>
+             </transition>
+          </div>
+          <button class="cancel-btn" @click="resetSession">取消分析</button>
+        </div>
+
+        <!-- Expert Hall -->
         <div class="master-hall">
           <div class="hall-header">
-            <h2 class="section-title">大师殿堂 · 49 位命理大师</h2>
+            <h2 class="section-title">分析专家团</h2>
             <div class="progress-container" v-if="sessionId">
               <div class="progress-info">
                 <span class="progress-percent">{{ progress }}%</span>
@@ -75,560 +88,840 @@
                 <div class="progress-fill" :style="{ width: progress + '%' }"></div>
               </div>
               <div class="progress-logs" v-if="statusLogs.length > 0">
-                <div v-for="(log, i) in statusLogs" :key="i" class="log-item" :class="{ 
-                  'first-log': i === 0,
-                  'graph-log': log.msg.includes('图谱')
-                }">
+                <div v-for="(log, i) in statusLogs" :key="i" class="log-item" :class="{ 'first-log': i === 0 }">
                   <span class="log-time">{{ log.time }}</span>
                   <span class="log-msg">{{ log.msg }}</span>
                 </div>
               </div>
             </div>
           </div>
+          
           <div class="master-grid">
             <div 
-              v-for="master in masters" 
-              :key="master.id" 
+              v-for="expert in experts" 
+              :key="expert.id" 
               class="master-card"
-              :class="{ 
-                'is-done': reports[master.id], 
-                'is-active': activeMasterId === master.id,
-                'is-pending': sessionId && !reports[master.id]
-              }"
-              @click="selectedMaster = master"
+              :class="{ 'is-active': true }"
             >
-              <div class="master-avatar">{{ master.name[0] }}</div>
+              <div class="master-avatar">{{ expert.name[0] }}</div>
               <div class="master-info">
-                <div class="master-name">{{ master.name }}</div>
-                <div class="master-camp">{{ master.camp }}</div>
+                <div class="master-name">{{ expert.name }}</div>
+                <div class="master-camp">{{ expert.role }}</div>
+                <div class="master-desc">{{ expert.description }}</div>
               </div>
-              <div class="check-icon" v-if="reports[master.id]">✓</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right: Reports & Summary -->
-      <div class="right-panel">
+      <!-- Right: Graph & Results -->
+      <div class="right-panel" :class="{ 'is-fullscreen': status === 'completed' }">
         <div class="empty-state" v-if="!sessionId">
           <div class="abstract-bg"></div>
           <div class="empty-content">
-            <h3>开启万年推演</h3>
-            <p>输入出生信息与预测年限，49 位跨越时空与流派的大师将为您合力推演未来轨迹</p>
+            <h3>开启文本透视</h3>
+            <p>上传文本，让 AI 专家团为您梳理错综复杂的人物关系网络</p>
+            <div style="margin-top: 24px; display: flex; gap: 16px; justify-content: center;">
+               <button class="primary-btn" @click="$refs.fileInput.click()">
+                 <span class="icon">📄</span> 上传文件
+               </button>
+               <button class="secondary-btn" @click="runMockPreview">
+                 <span class="icon">✨</span> 演示效果
+               </button>
+            </div>
           </div>
         </div>
 
-        <div class="report-container" v-else>
-          <div class="active-report" v-if="activeMasterId && reports[activeMasterId]">
-            <div class="report-header">
-              <span class="master-tag">{{ reports[activeMasterId].name }}</span>
-              <button class="close-report" @click="activeMasterId = null">查看全案总结</button>
-            </div>
-            <div class="report-content markdown-body" v-html="formatMarkdown(reports[activeMasterId].content)"></div>
-          </div>
-
-          <div class="global-summary" v-else-if="summary">
-            <div class="summary-header">
-              <h2 class="summary-title">命运总结官 · 全案汇总</h2>
-              <div class="summary-badge">聚合 49 位大师共识</div>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="tab-content-area" v-if="hasGraphData">
-              <!-- 1. Graph Visualizer (Main Tree View) -->
-              <div class="graph-full-section">
-                <div class="section-header">
-                  <h3 class="section-title">全量命运时空图 · 关联推演</h3>
-                  <div class="section-subtitle">通过底部滑块控制时间轴，观测命运之树的生长轨迹</div>
-                </div>
-                <div class="graph-visual-full">
-                  <GraphVisualizer 
-                    :data="summary.graph_data" 
-                    :min-year="predictionStartYear"
-                    :max-year="predictionEndYear"
-                  />
-                </div>
-              </div>
-
-              <!-- 2. Fate Radar & Structured Report -->
-              <div class="graph-full-section">
-
-                <div class="section-header">
-                  <h3 class="section-title">
-                    {{ currentYearTab === 'all' ? '赛博天机仪 · 核心推演拟合' : `${currentYearTab} · 年度天机拟合` }}
-                  </h3>
-                  <div class="section-subtitle">
-                    {{ currentYearTab === 'all' ? '基于 49 位命理大师的预测进行全量时空拟合' : `聚焦 ${currentYearTab} 的核心定数与变数` }}
-                  </div>
-                </div>
-                <div class="radar-visual-wrapper">
-                  <FateRadar :data="currentRadarData" :key="currentYearTab" />
-                </div>
-              </div>
-
-              <!-- 3. Yearly Breakdown List (Visible when specific year selected) -->
-              <div class="summary-grid" v-if="currentYearTab !== 'all'">
-                 <div class="summary-block">
-                  <h3>{{ currentYearTab }} 核心定数</h3>
-                  <ul v-if="currentYearConsensus.length">
-                    <li v-for="(item, i) in currentYearConsensus" :key="i">
-                      <span class="item-text">{{ item.name }}</span>
-                      <span class="item-desc" v-if="item.description"> - {{ item.description.substring(0, 30) }}...</span>
-                      <span class="item-impact">强度 {{ item.impact }}</span>
-                    </li>
-                  </ul>
-                  <div v-else class="empty-list">本年度暂无核心定数记录</div>
-                </div>
-                <div class="summary-block">
-                  <h3>{{ currentYearTab }} 命理变数</h3>
-                  <ul v-if="currentYearUnique.length">
-                    <li v-for="(item, i) in currentYearUnique" :key="i" class="conflict-item">
-                      <span class="item-text">{{ item.name }}</span>
-                      <span class="item-desc" v-if="item.description"> - {{ item.description.substring(0, 30) }}...</span>
-                      <span class="item-impact">变数 {{ item.impact }}</span>
-                    </li>
-                  </ul>
-                  <div v-else class="empty-list">本年度暂无特殊变数记录</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. 结构化报告表格 (Always Visible) -->
-            <div class="fate-report-table" v-if="hasGraphData">
-              <div class="table-header">
-                <h3 class="table-title">
-                  <span class="title-icon">📜</span>
-                  全案推演报告
-                </h3>
-                <div class="table-filters">
-                  <button 
-                    v-for="dim in [{key: 'all', name: '全部', icon: '🌐'}, {key: 'career', name: '事业', icon: '💼'}, {key: 'wealth', name: '财富', icon: '💰'}, {key: 'emotion', name: '情感', icon: '❤️'}, {key: 'health', name: '健康', icon: '🌿'}]"
-                    :key="dim.key"
-                    :class="['filter-btn', { active: selectedDimension === dim.key }]"
-                    @click="selectedDimension = dim.key"
-                  >
-                    <span class="btn-icon">{{ dim.icon }}</span>
-                    {{ dim.name }}
-                  </button>
-                </div>
-              </div>
-              
-              <div class="table-container">
-                <div v-for="yearData in filteredTableData" :key="yearData.year" class="year-section">
-                  <div class="year-header">
-                    <span class="year-badge">{{ yearData.year }}</span>
-                    <div class="year-line"></div>
-                  </div>
-                  
-                  <div class="dimensions-grid">
-                    <div v-for="dimData in yearData.dimensions" :key="dimData.dimension" class="dimension-card">
-                      <div class="dim-header">
-                        <span class="dim-icon">{{ dimData.icon }}</span>
-                        <span class="dim-name">{{ dimData.name }}</span>
-                      </div>
-                      
-                      <!-- 核心共识 -->
-                      <div class="insight-group consensus-group" v-if="dimData.consensus.length">
-                        <div class="group-label">
-                          <span class="label-dot consensus"></span>
-                          核心共识
-                        </div>
-                        <div v-for="(item, idx) in dimData.consensus" :key="'c'+idx" class="insight-item">
-                          <div class="item-header" @click="toggleRowExpand(`${yearData.year}-${dimData.dimension}-c-${idx}`)">
-                            <span class="item-title">{{ item.name }}</span>
-                            <div class="item-meta">
-                              <span class="impact-badge high">强度 {{ item.impact }}</span>
-                              <span class="expand-icon">{{ expandedRows.has(`${yearData.year}-${dimData.dimension}-c-${idx}`) ? '▲' : '▼' }}</span>
-                            </div>
-                          </div>
-                          <Transition name="slide">
-                            <div v-if="expandedRows.has(`${yearData.year}-${dimData.dimension}-c-${idx}`)" class="item-detail">
-                              <p class="detail-text">{{ item.description }}</p>
-                              <span class="detail-source">— {{ item.master_name }}</span>
-                            </div>
-                          </Transition>
-                        </div>
-                      </div>
-                      
-                      <!-- 独特视角 -->
-                      <div class="insight-group unique-group" v-if="dimData.unique.length">
-                        <div class="group-label">
-                          <span class="label-dot unique"></span>
-                          独特视角
-                        </div>
-                        <div v-for="(item, idx) in dimData.unique" :key="'u'+idx" class="insight-item">
-                          <div class="item-header" @click="toggleRowExpand(`${yearData.year}-${dimData.dimension}-u-${idx}`)">
-                            <span class="item-title unique-title">✨ {{ item.name }}</span>
-                            <div class="item-meta">
-                              <span class="impact-badge medium">影响 {{ item.impact }}</span>
-                              <span class="expand-icon">{{ expandedRows.has(`${yearData.year}-${dimData.dimension}-u-${idx}`) ? '▲' : '▼' }}</span>
-                            </div>
-                          </div>
-                          <Transition name="slide">
-                            <div v-if="expandedRows.has(`${yearData.year}-${dimData.dimension}-u-${idx}`)" class="item-detail">
-                              <p class="detail-text">{{ item.description }}</p>
-                              <span class="detail-source">— {{ item.master_name }}</span>
-                            </div>
-                          </Transition>
-                        </div>
-                      </div>
-                      
-                      <!-- 命理变数 -->
-                      <div class="insight-group variable-group" v-if="dimData.variable.length">
-                        <div class="group-label">
-                          <span class="label-dot variable"></span>
-                          命理变数
-                        </div>
-                        <div v-for="(item, idx) in dimData.variable" :key="'v'+idx" class="insight-item">
-                          <div class="item-header" @click="toggleRowExpand(`${yearData.year}-${dimData.dimension}-v-${idx}`)">
-                            <span class="item-title variable-title">⚡ {{ item.name }}</span>
-                            <div class="item-meta">
-                              <span class="impact-badge warning">变数 {{ item.impact }}</span>
-                              <span class="expand-icon">{{ expandedRows.has(`${yearData.year}-${dimData.dimension}-v-${idx}`) ? '▲' : '▼' }}</span>
-                            </div>
-                          </div>
-                          <Transition name="slide">
-                            <div v-if="expandedRows.has(`${yearData.year}-${dimData.dimension}-v-${idx}`)" class="item-detail variable-detail">
-                              <p class="detail-text">{{ item.description }}</p>
-                              <span class="detail-source">— {{ item.master_name }}</span>
-                            </div>
-                          </Transition>
-                        </div>
-                      </div>
-                      
-                      <div v-if="!dimData.consensus.length && !dimData.unique.length && !dimData.variable.length" class="empty-dim">
-                        暂无数据
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 5. Global Lists (Only in All tab and if graph data exists) -->
-            <div class="summary-grid" v-if="currentYearTab === 'all' && hasGraphData">
-              <div class="summary-block">
-                <h3>全案核心共识</h3>
-                <ul>
-                  <li v-for="(item, i) in summary.consensus" :key="i">
-                    <span class="item-text">{{ typeof item === 'object' ? item.text : item }}</span>
-                    <span v-if="item.impact" class="item-impact">强度 {{ item.impact }}</span>
-                  </li>
-                </ul>
-              </div>
-              <div class="summary-block">
-                <h3>全案命理变数</h3>
-                <ul>
-                  <li v-for="(item, i) in summary.conflicts" :key="i" class="conflict-item">
-                    <span class="item-text">{{ typeof item === 'object' ? item.text : item }}</span>
-                    <span v-if="item.impact" class="item-impact">变数 {{ item.impact }}</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="summary-loading ritual-ceremony" v-else>
-            <div class="ritual-bg">
+        <div class="report-container" v-else :class="{ 'no-padding': status === 'completed' }">
+          <!-- Loading State -->
+          <div class="summary-loading ritual-ceremony" v-if="status !== 'completed'">
+             <div class="ritual-bg">
               <div class="scan-line"></div>
               <div class="orbit-circles">
                 <div class="orbit-1"></div>
                 <div class="orbit-2"></div>
-                <div class="orbit-3"></div>
               </div>
             </div>
             <div class="ritual-content">
               <div class="ritual-spinner"></div>
               <h2 class="ritual-title">
-                {{ status === 'completed' ? '天机已现' : (status === 'aggregating' ? '天机聚合中' : '大师推演中') }}
+                {{ status === 'aggregating' ? '关系聚合中' : '专家阅读中' }}
               </h2>
-              <p class="ritual-msg">
-                {{ status === 'completed' ? '推演全案已准备就绪，正在呈现最终图谱...' : statusMsg }}
-              </p>
+              <p class="ritual-msg">{{ statusMsg }}</p>
               
-              <!-- 天机贴士轮播 -->
-              <div class="fortune-tip-container" v-if="status !== 'completed'">
+              <!-- Tips Carousel -->
+              <div class="fortune-tip-container">
                 <Transition name="fade" mode="out-in">
                   <div :key="currentTipIndex" class="fortune-tip">
-                    <span class="tip-label">天机贴士:</span>
-                    <span class="tip-content">{{ fortuneTips[currentTipIndex] }}</span>
+                    <span class="tip-label">分析贴士:</span>
+                    <span class="tip-content">{{ tips[currentTipIndex] }}</span>
                   </div>
                 </Transition>
               </div>
+            </div>
+          </div>
 
-              <div class="loading-stats">已完成: {{ reportsCount }} / 49 位大师</div>
+          <!-- Result Graph -->
+          <div class="graph-full-section" v-else>
+            <div class="section-header-overlay">
+              <div class="back-btn" @click="resetSession">← 重新上传</div>
+              
+              <div class="search-bar">
+                <input 
+                  type="text" 
+                  v-model="searchQuery" 
+                  placeholder="搜索人物..." 
+                  @keyup.enter="handleSearch"
+                />
+                <button class="search-btn" @click="handleSearch">
+                  <span class="icon">🔍</span>
+                </button>
+              </div>
+
+              <div class="stats-badge">
+                已识别 {{ result?.entities?.length || 0 }} 个人物，{{ result?.relationships?.length || 0 }} 条关系链
+              </div>
+            </div>
+            <div class="graph-visual-full">
+               <GraphVisualizer 
+                  ref="graphVisualizerRef"
+                  v-if="result"
+                  :data="graphData"
+                  :layoutMode="layoutMode"
+                  @select-node="handleNodeSelect"
+                  @node-double-click="handleNodeDoubleClick"
+                  @select-edge="handleEdgeSelect"
+                  @clear-selection="handleClearSelection"
+                />
+            </div>
+            <div class="summary-panel" v-if="result?.overview">
+              <div class="summary-block overview-block">
+                <div class="summary-title">整体概览</div>
+                <div class="summary-text">{{ overview.overview_text || '暂无概览信息' }}</div>
+                <div class="summary-stats">
+                  <div class="stat-item">
+                    <div class="stat-label">人物</div>
+                    <div class="stat-value">{{ overview.entity_count || 0 }}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">关系</div>
+                    <div class="stat-value">{{ overview.relationship_count || 0 }}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">核心</div>
+                    <div class="stat-value">{{ overview.top_entities?.length || 0 }}</div>
+                  </div>
+                </div>
+                <div class="type-distribution">
+                  <div v-for="item in relationTypeStats" :key="item.type" class="type-row">
+                    <div class="type-label">
+                      <span class="type-dot" :style="{ backgroundColor: item.color }"></span>
+                      {{ item.label }}
+                    </div>
+                    <div class="type-bar">
+                      <div class="type-bar-fill" :style="{ width: item.percent + '%', backgroundColor: item.color }"></div>
+                    </div>
+                    <div class="type-count">{{ item.count }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block" v-if="experts.length">
+                <div class="summary-title">专家视角</div>
+                <div class="expert-view-grid">
+                  <div 
+                    v-for="expert in experts" 
+                    :key="expert.id" 
+                    class="expert-view-card"
+                    :class="{ 'is-selected': selectedExpertId === expert.id }"
+                    @click="handleExpertClick(expert)"
+                  >
+                    <div class="expert-view-name">{{ expert.name }}</div>
+                    <div class="expert-view-role">{{ expert.role }}</div>
+                    <div class="expert-view-desc">{{ expert.description }}</div>
+                    <div class="expert-view-action" v-if="selectedExpertId === expert.id">
+                        <div class="action-btn">查看{{ expert.name }}的分析报告 ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Expert Sidebar -->
+              <transition name="slide-right">
+                <div v-if="showingExpertReport && selectedExpert" class="entity-sidebar expert-sidebar">
+                  <div class="sidebar-header">
+                    <div class="expert-info">
+                      <div class="name">{{ selectedExpert.name }}</div>
+                      <div class="role">{{ selectedExpert.role }}</div>
+                    </div>
+                    <div class="close-btn" @click="closeExpertReport">×</div>
+                  </div>
+                  <div class="sidebar-content">
+                    <div class="report-section">
+                      <div class="section-title">核心发现</div>
+                      <div class="section-text">
+                         {{ getExpertReport(selectedExpert).findings }}
+                      </div>
+                    </div>
+                    <div class="report-section">
+                       <div class="section-title">关注的关系</div>
+                       <div class="related-tags">
+                          <span v-for="tag in getExpertReport(selectedExpert).tags" :key="tag" class="tag" :style="{ borderColor: typeColorMap[tag] || '#888', color: typeColorMap[tag] || '#888' }">
+                            {{ getRelationLabel(tag) }}
+                          </span>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </transition>
+
+              <!-- Entity Sidebar -->
+              <transition name="slide-right">
+                <div v-if="selectedEntityDetail" class="entity-sidebar">
+                  <div class="sidebar-header" :class="'role-' + selectedEntityDetail.type">
+                    <div class="expert-info">
+                      <div class="name">{{ selectedEntityDetail.id }}</div>
+                      <div class="role">{{ getRoleLabel(selectedEntityDetail.type) }} | 影响力指数: {{ selectedEntityDetail.degree }}</div>
+                    </div>
+                    <div class="close-btn" @click="selectedEntityId = null">×</div>
+                  </div>
+                  <div class="sidebar-content">
+                    <div class="report-section">
+                      <div class="section-title">人物侧写</div>
+                      <div class="section-text">
+                         {{ selectedEntityDetail.description }}
+                      </div>
+                    </div>
+                    <div class="report-section">
+                       <div class="section-title">核心关系网</div>
+                       <div class="relation-list-mini">
+                          <div v-for="rel in getEntityRelationships(selectedEntityDetail.id)" :key="rel.target" class="relation-mini-item">
+                              <span class="rel-target">{{ rel.target }}</span>
+                              <span class="rel-arrow">── {{ rel.relation }} ──></span> 
+                              <span class="rel-type" :style="{ color: typeColorMap[rel.type] }">{{ getRelationLabel(rel.type) }}</span>
+                          </div>
+                          <div v-if="getEntityRelationships(selectedEntityDetail.id).length === 0" class="no-data">暂无核心关系记录</div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </transition>
+
+              <transition name="slide-right">
+                <div v-if="selectedRelationDetail" class="entity-sidebar relation-sidebar">
+                  <div class="sidebar-header">
+                    <div class="expert-info">
+                      <div class="name">{{ selectedRelationDetail.relation }}</div>
+                      <div class="role">{{ getRelationLabel(selectedRelationDetail.type) }} | 强度 {{ selectedRelationDetail.weight || 1 }}</div>
+                    </div>
+                    <div class="close-btn" @click="selectedRelation = null">×</div>
+                  </div>
+                  <div class="sidebar-content">
+                    <div class="report-section">
+                      <div class="section-title">关系双方</div>
+                      <div class="relation-actors-block">
+                        <button class="entity-link" @click="openEntityFromRelation(selectedRelationDetail.source)">
+                          {{ selectedRelationDetail.source }}
+                        </button>
+                        <span class="relation-arrow">—</span>
+                        <button class="entity-link" @click="openEntityFromRelation(selectedRelationDetail.target)">
+                          {{ selectedRelationDetail.target }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="report-section">
+                      <div class="section-title">关系标签</div>
+                      <div class="relation-tag" :style="{ borderColor: typeColorMap[selectedRelationDetail.type] || '#607D8B', color: typeColorMap[selectedRelationDetail.type] || '#607D8B' }">
+                        {{ getRelationLabel(selectedRelationDetail.type) }}
+                      </div>
+                    </div>
+                    <div class="report-section" v-if="selectedRelationDetail.evidence">
+                      <div class="section-title">证据</div>
+                      <div class="section-text">“{{ selectedRelationDetail.evidence }}”</div>
+                    </div>
+                  </div>
+                </div>
+              </transition>
+
+              <div class="summary-block">
+                <div class="summary-title">核心人物</div>
+                <div class="entity-grid">
+                  <div 
+                    v-for="e in topEntities" 
+                    :key="e.id" 
+                    class="entity-card" 
+                    :class="[
+                      `role-${e.type || 'neutral'}`,
+                      { 
+                        'is-selected': selectedEntityId === e.id,
+                        'is-dimmed': selectedEntityId && selectedEntityId !== e.id
+                      }
+                    ]"
+                    :id="`entity-${e.id}`"
+                    @click="handleEntityClick(e)"
+                  >
+                    <div class="entity-name">{{ e.id }}</div>
+                    <div class="entity-role">{{ roleLabels[e.type] || '人物' }}</div>
+                    <div class="entity-degree">关联度 {{ e.degree }}</div>
+                    <div class="entity-desc" v-if="e.description">{{ e.description }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block">
+                <div class="summary-title">关键关系</div>
+                <div class="relation-list">
+                  <div 
+                    v-for="(r, i) in filteredKeyRelationships" 
+                    :key="i" 
+                    class="relation-item"
+                    :class="{ 'is-highlighted': isRelationRelevant(r) }"
+                  >
+                    <div class="relation-header">
+                      <div class="relation-badge" :style="{ backgroundColor: typeColorMap[r.type] || '#607D8B' }">
+                        {{ r.relation || r.type || '关系' }}
+                      </div>
+                      <div class="relation-actors">
+                        <span :class="{ 'highlight-text': selectedEntityId === r.source }">{{ r.source }}</span>
+                        — 
+                        <span :class="{ 'highlight-text': selectedEntityId === r.target }">{{ r.target }}</span>
+                      </div>
+                      <div class="relation-weight">强度 {{ r.weight || 1 }}</div>
+                    </div>
+                    <div class="relation-evidence" v-if="r.evidence">“{{ r.evidence }}”</div>
+                  </div>
+                  <div v-if="keyRelationships.length > filteredKeyRelationships.length" class="more-hint">
+                    ... 还有 {{ keyRelationships.length - filteredKeyRelationships.length }} 条其他关系 (点击空白处查看全部)
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block" v-if="readerQuestions.length || readerTakeaways.length">
+                <div class="summary-title">读者视角</div>
+                <div class="reader-section" v-if="readerQuestions.length">
+                  <div class="reader-subtitle">你可能最关心</div>
+                  <div class="reader-list">
+                    <div v-for="(q, i) in readerQuestions" :key="`rq-${i}`" class="reader-item">
+                      {{ q }}
+                    </div>
+                  </div>
+                </div>
+                <div class="reader-section" v-if="readerTakeaways.length">
+                  <div class="reader-subtitle">当前可回答</div>
+                  <div class="reader-list">
+                    <div v-for="(t, i) in readerTakeaways" :key="`rt-${i}`" class="reader-item">
+                      {{ t }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block" v-if="storylineLines.length">
+                <div class="summary-title">剧情主线</div>
+                <div class="storyline-list">
+                  <div 
+                    v-for="(line, i) in storylineLines" 
+                    :key="i" 
+                    class="storyline-item"
+                    :class="{ 'is-dimmed': selectedEntityId && !line.includes(selectedEntityId) }"
+                  >
+                    {{ line }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block" v-if="protagonistConnections.length">
+                <div class="summary-title">主角关系圈</div>
+                <div class="relation-list">
+                  <div 
+                    v-for="(c, i) in filteredProtagonistConnections" 
+                    :key="i" 
+                    class="relation-item"
+                  >
+                    <div class="relation-header">
+                      <div class="relation-badge" :style="{ backgroundColor: typeColorMap[c.type] || '#607D8B' }">
+                        {{ c.relation || '关系' }}
+                      </div>
+                      <div class="relation-actors">{{ overview.protagonists?.[0] || '核心人物' }} — {{ c.target }}</div>
+                      <div class="relation-weight">强度 {{ c.weight || 1 }}</div>
+                    </div>
+                    <div class="relation-evidence" v-if="c.evidence">“{{ c.evidence }}”</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-block" v-if="clusters.length">
+                <div class="summary-title">关系簇</div>
+                <div class="cluster-list">
+                  <div 
+                    v-for="(g, i) in clusters" 
+                    :key="i" 
+                    class="cluster-item"
+                    :class="{ 'is-selected': selectedEntityId && (g.members || []).includes(selectedEntityId) }"
+                  >
+                    <div class="cluster-header">
+                      <div class="relation-badge" :style="{ backgroundColor: typeColorMap[g.dominant_type] || '#607D8B' }">
+                        {{ g.dominant_label }}
+                      </div>
+                      <div class="cluster-size">规模 {{ g.size }}</div>
+                    </div>
+                    <div class="cluster-members">
+                      <span 
+                        v-for="(m, mi) in (g.members || [])" 
+                        :key="mi" 
+                        :class="{ 'highlight-text': m === selectedEntityId }"
+                      >
+                        {{ m }}{{ mi < (g.members || []).length - 1 ? '、' : '' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </main>
-
-    <!-- Master Detail Modal -->
-    <div class="modal-overlay" v-if="selectedMaster" @click="selectedMaster = null">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <div class="modal-avatar">{{ selectedMaster.name[0] }}</div>
-          <div class="modal-title-group">
-            <h3>{{ selectedMaster.name }}</h3>
-            <span class="modal-camp">{{ selectedMaster.camp }} · {{ selectedMaster.role }}</span>
-          </div>
-          <button class="close-modal" @click="selectedMaster = null">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="info-section">
-            <h4>流派简介</h4>
-            <p>{{ selectedMaster.description }}</p>
-          </div>
-          <div class="info-section">
-            <h4>核心推演逻辑</h4>
-            <p>{{ selectedMaster.methodology }}</p>
-          </div>
-          <div class="report-section" v-if="reports[selectedMaster.id]">
-            <h4>推演报告</h4>
-            <div class="report-text markdown-body" v-html="formatMarkdown(reports[selectedMaster.id].content)"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 防命薄机制弹窗 -->
-    <div class="modal-overlay fate-shield-modal" v-if="showFateShieldModal" @click="showFateShieldModal = false">
-      <div class="modal-content fate-shield-content" @click.stop>
-        <div class="modal-header">
-          <div class="modal-avatar">🛡️</div>
-          <div class="modal-title-group">
-            <h3>防命薄机制已启动</h3>
-            <span class="modal-camp">平行时空保护协议</span>
-          </div>
-        </div>
-        <div class="modal-body">
-          <div class="shield-message">
-            <p>我会告诉各位大师本次为<strong>平行时空</strong>下的命理演算，不会对您的个人命运造成影响。</p>
-          </div>
-          <button class="confirm-btn" @click="confirmFateShield">确认启动</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { analyzeFate, getStatus, getReport, listMasters } from '../api/fortune'
+import { analyzeFate, getStatus } from '../api/fortune'
 import toast from '../utils/toast'
-import { marked } from 'marked'
 import GraphVisualizer from '../components/GraphVisualizer.vue'
-import FateRadar from '../components/FateRadar.vue'
 
 const router = useRouter()
+const graphVisualizerRef = ref(null)
+const searchQuery = ref('')
 
-// Form Data
-const formData = ref({
-  name: '',
-  birthday: '1995-06-15',
-  birth_time: '10:00',
-  birth_location: '上海',
-  gender: '男',
-  future_years: 3
-})
+// Upload State
+const file = ref(null)
+const fileInput = ref(null)
+const isDragOver = ref(false)
 
-const predictionStartYear = computed(() => new Date().getFullYear())
-const predictionEndYear = computed(() => {
-  const years = parseInt(formData.value.future_years) || 10
-  return predictionStartYear.value + years
-})
-
-// State
+// Analysis State
 const loading = ref(false)
 const sessionId = ref(null)
 const status = ref('idle')
 const statusMsg = ref('')
 const progress = ref(0)
 const statusLogs = ref([])
-const masters = ref([])
-const reports = ref({})
-const summary = ref(null)
-const activeMasterId = ref(null)
-const selectedMaster = ref(null)
+const experts = ref([])
+const result = ref(null)
 const pollTimer = ref(null)
-const currentYearTab = ref('all') // 'all' or '2026年', '2027年' etc.
 
-// 防命薄机制状态
-const fateShieldEnabled = ref(false)
-const showFateShieldModal = ref(false)
+// Selection State
+const selectedEntityId = ref(null)
+const selectedRelation = ref(null)
+const layoutMode = ref('force')
 
-// 天机贴士逻辑
+// Tips
 const currentTipIndex = ref(0)
-const fortuneTips = [
-  "紫微斗数起源于北宋，是中国传统命理学的重要支柱。",
-  "八字中的‘五行’指金、木、水、火、土，代表宇宙能量的循环。",
-  "天干地支共有60种组合，称为‘六十甲子’。",
-  "奇门遁甲被誉为‘帝王之学’，侧重于时空方位的选择。",
-  "西方古典占星学通过行星的尊贵力量来判断命运轨迹。",
-  "人类图结合了易经、占星、卡巴拉和脉轮系统。",
-  "塔罗牌的大阿卡纳共有22张，象征灵魂成长的不同阶段。",
-  "大师们的观点若有冲突，往往代表你命局中存在转折的变数。"
+const tips = [
+  "关系考古学家正在挖掘隐藏的血缘线索...",
+  "情感心理学家正在分析人物间微妙的情绪流动...",
+  "权力分析师正在解构组织架构与利益同盟...",
+  "叙事结构师正在辨识主线与支线的关系脉络...",
+  "动机剖析师正在追踪人物行为的关键转折..."
 ]
 let tipTimer = null
 
-const startTipRotation = () => {
-  if (tipTimer) clearInterval(tipTimer)
-  tipTimer = setInterval(() => {
-    currentTipIndex.value = (currentTipIndex.value + 1) % fortuneTips.length
-  }, 5000)
+const defaultExperts = [
+  { id: "genealogist", name: "关系考古学家", role: "Genealogist", description: "挖掘血缘与家族谱系" },
+  { id: "psychologist", name: "情感心理学家", role: "Psychologist", description: "分析情感纠葛与心理距离" },
+  { id: "strategist", name: "权力分析师", role: "Strategist", description: "解析利益同盟与权力结构" },
+  { id: "structuralist", name: "叙事结构师", role: "Structuralist", description: "识别主线与支线的结构关系" },
+  { id: "motivator", name: "动机剖析师", role: "Motivation Analyst", description: "追踪人物行为背后的动机与转变" }
+]
+
+const roleLabels = {
+  protagonist: '主角',
+  antagonist: '反派',
+  supporting: '配角',
+  neutral: '中立'
 }
 
-const stopTipRotation = () => {
-  if (tipTimer) clearInterval(tipTimer)
+const typeColorMap = {
+  family: '#00C853',
+  social: '#2979FF',
+  romance: '#FF4081',
+  conflict: '#FF3D00',
+  work: '#FFAB00',
+  other: '#607D8B'
 }
 
-// 防命薄机制处理
-const handleFateShieldChange = () => {
-  if (fateShieldEnabled.value) {
-    showFateShieldModal.value = true
-  }
-}
-
-const confirmFateShield = () => {
-  showFateShieldModal.value = false
-}
-
-const isFormValid = computed(() => {
-  return formData.value.birthday && formData.value.birth_time && formData.value.birth_location
-})
-
-const availableYears = computed(() => {
-  if (!summary.value || !summary.value.graph_data || !summary.value.graph_data.nodes) return []
-  const years = new Set(summary.value.graph_data.nodes.map(n => n.properties?.time).filter(t => t))
-  return Array.from(years).sort()
-})
-
-const currentRadarData = computed(() => {
-  if (!summary.value || !summary.value.graph_data) return { nodes: [], edges: [] }
-  if (currentYearTab.value === 'all') return summary.value.graph_data
-  
-  const filteredNodes = summary.value.graph_data.nodes.filter(n => n.properties?.time === currentYearTab.value)
-  // Keep edges only if both source and target are in filteredNodes
-  const nodeIds = new Set(filteredNodes.map(n => n.id))
-  const filteredEdges = summary.value.graph_data.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
-  
-  return { nodes: filteredNodes, edges: filteredEdges }
-})
-
-const currentYearConsensus = computed(() => {
-  if (!currentRadarData.value.nodes) return []
-  return currentRadarData.value.nodes
-    .filter(n => n.properties?.type === 'consensus')
-    .map(n => n.properties)
-    .sort((a, b) => b.impact - a.impact)
-})
-
-const currentYearUnique = computed(() => {
-  if (!currentRadarData.value.nodes) return []
-  return currentRadarData.value.nodes
-    .filter(n => n.properties?.type === 'unique' || n.properties?.type === 'conflict' || n.properties?.type === 'variable')
-    .map(n => n.properties)
-    .sort((a, b) => b.impact - a.impact)
-})
-
-const hasGraphData = computed(() => {
-  return summary.value?.graph_data?.nodes?.length > 0
-})
-
-// 表格数据计算属性 - 按年份和维度组织数据
-const tableData = computed(() => {
-  if (!summary.value?.graph_data?.nodes) return []
-  
-  const nodes = summary.value.graph_data.nodes
-  const dimensions = ['career', 'wealth', 'emotion', 'health']
-  const dimNames = { career: '事业', wealth: '财富', emotion: '情感', health: '健康' }
-  const dimIcons = { career: '💼', wealth: '💰', emotion: '❤️', health: '🌿' }
-  
-  // 按年份分组
-  const years = [...new Set(nodes.map(n => n.properties?.time).filter(Boolean))].sort()
-  
-  return years.map(year => {
-    const yearNodes = nodes.filter(n => n.properties?.time === year)
-    
-    const dimData = dimensions.map(dim => {
-      const dimNodes = yearNodes.filter(n => n.properties?.dimension === dim)
+// Computed
+const graphData = computed(() => {
+  if (!result.value) return { nodes: [], edges: [] }
+  const raw = result.value
+  const graphData = raw.graph_data || raw.graphData || raw.graph
+  const entities = Array.isArray(graphData?.nodes)
+    ? graphData.nodes
+    : (Array.isArray(raw.entities) ? raw.entities : (Array.isArray(raw.nodes) ? raw.nodes : []))
+  const relationships = Array.isArray(graphData?.edges)
+    ? graphData.edges
+    : (Array.isArray(raw.relationships)
+      ? raw.relationships
+      : (Array.isArray(raw.edges) ? raw.edges : (Array.isArray(raw.links) ? raw.links : [])))
+  return {
+    nodes: entities.map(e => {
+      const properties = e.properties || {}
+      const name = e.name || properties.name
+      const id = e.id || e.name || properties.name
+      if (!id) return null
       return {
-        dimension: dim,
-        name: dimNames[dim],
-        icon: dimIcons[dim],
-        consensus: dimNodes.filter(n => n.properties?.type === 'consensus').map(n => n.properties),
-        unique: dimNodes.filter(n => n.properties?.type === 'unique').map(n => n.properties),
-        variable: dimNodes.filter(n => n.properties?.type === 'variable').map(n => n.properties)
+        id,
+        label: name || id,
+        type: e.type || properties.type,
+        degree: e.degree || properties.impact,
+        description: e.description || properties.description,
+        ...e
       }
-    })
-    
-    return { year, dimensions: dimData }
-  })
-})
-
-// 表格筛选状态
-const selectedDimension = ref('all')
-const expandedRows = ref(new Set())
-
-const filteredTableData = computed(() => {
-  if (selectedDimension.value === 'all') return tableData.value
-  return tableData.value.map(yearData => ({
-    ...yearData,
-    dimensions: yearData.dimensions.filter(d => d.dimension === selectedDimension.value)
-  }))
-})
-
-const toggleRowExpand = (key) => {
-  if (expandedRows.value.has(key)) {
-    expandedRows.value.delete(key)
-  } else {
-    expandedRows.value.add(key)
+    }).filter(Boolean),
+    links: relationships.map(r => {
+      const source = r.source?.id || r.source?.name || r.source
+      const target = r.target?.id || r.target?.name || r.target
+      if (!source || !target) return null
+      return {
+        source,
+        target,
+        label: r.relation || r.label,
+        ...r
+      }
+    }).filter(Boolean)
   }
-  expandedRows.value = new Set(expandedRows.value)
+})
+
+const overview = computed(() => result.value?.overview || result.value?.summary || {})
+
+const topEntities = computed(() => overview.value.top_entities || [])
+
+const keyRelationships = computed(() => overview.value.key_relationships || [])
+
+const storylineLines = computed(() => overview.value.storyline_lines || [])
+
+const readerQuestions = computed(() => overview.value.reader_questions || [])
+
+const readerTakeaways = computed(() => overview.value.reader_takeaways || [])
+
+const protagonistConnections = computed(() => overview.value.protagonist_connections || [])
+
+const clusters = computed(() => overview.value.clusters || [])
+
+// Filtered Lists based on Selection
+const filteredKeyRelationships = computed(() => {
+  const all = keyRelationships.value
+  if (selectedEntityId.value) {
+    // Show relationships involving the selected entity
+    // And prioritize them
+    return all.filter(r => r.source === selectedEntityId.value || r.target === selectedEntityId.value)
+  }
+  return all
+})
+
+const filteredProtagonistConnections = computed(() => {
+  const all = protagonistConnections.value
+  if (selectedEntityId.value) {
+    // If selected entity is protagonist, show all?
+    // If selected entity is someone else, show connection to protagonist
+    return all.filter(c => c.target === selectedEntityId.value)
+  }
+  return all
+})
+
+const getRelationNodeId = (node) => node?.id || node?.name || node
+
+const selectedRelationDetail = computed(() => {
+    if (!selectedRelation.value) return null
+    const link = selectedRelation.value
+    const source = getRelationNodeId(link.source)
+    const target = getRelationNodeId(link.target)
+    if (!source || !target) return null
+    return {
+        source,
+        target,
+        relation: link.relation || link.label || link.type || '关系',
+        type: link.type || 'other',
+        weight: link.weight || 1,
+        evidence: link.evidence || ''
+    }
+})
+
+const isRelationRelevant = (r) => {
+    if (!selectedRelationDetail.value) return false
+    const { source, target } = selectedRelationDetail.value
+    return (r.source === source && r.target === target) || (r.source === target && r.target === source)
 }
+
+// Expert Interaction
+const selectedExpertId = ref(null)
+const showingExpertReport = ref(false)
+const selectedExpert = computed(() => experts.value.find(e => e.id === selectedExpertId.value))
+
+const handleExpertClick = (expert) => {
+    selectedEntityId.value = null // Close entity sidebar
+    selectedExpertId.value = expert.id
+    showingExpertReport.value = true
+}
+
+const closeExpertReport = () => {
+    showingExpertReport.value = false
+    selectedExpertId.value = null
+}
+
+const getRelationLabel = (type) => {
+    const map = {
+      family: '亲属',
+      social: '社交',
+      romance: '情感',
+      conflict: '冲突',
+      work: '工作',
+      other: '其他'
+    }
+    return map[type] || type
+}
+
+const getExpertReport = (expert) => {
+    // Mock report data based on expert type
+    const base = {
+        genealogist: {
+            findings: "家族谱系中存在隐藏的血缘纽带，建议关注父辈之间的未解之谜。",
+            tags: ['family']
+        },
+        psychologist: {
+            findings: "人物间的情感流动极其复杂，爱恨交织是推动剧情的核心动力。",
+            tags: ['romance', 'social']
+        },
+        strategist: {
+            findings: "各方势力在资源与权力上的博弈处于胶着状态，关键人物的站队将决定局势走向。",
+            tags: ['work', 'conflict']
+        },
+        narrator: {
+            findings: "关键事件的时间线存在多处重叠，暗示了背后可能存在平行叙事或不可靠叙述者。",
+            tags: ['work', 'social', 'family']
+        },
+        conflict: { // mediator
+             findings: "冲突的主要根源在于核心利益的不可调和，短期内难以通过对话解决。",
+             tags: ['conflict']
+        }
+    }
+    
+    // Default fallback
+    const def = {
+        findings: `${expert.name} 正在深入分析相关领域的隐藏线索，目前已识别出多处关键节点。`,
+        tags: ['other']
+    }
+    
+    // Map expert id to key
+    let key = expert.id
+    if (key === 'mediator') key = 'conflict'
+    
+    return base[key] || def
+}
+
+// Entity Interaction
+const selectedEntityDetail = computed(() => {
+    if (!selectedEntityId.value || !result.value) return null
+    return result.value.entities.find(e => e.id === selectedEntityId.value)
+})
+
+const getRoleLabel = (type) => {
+    return roleLabels[type] || type
+}
+
+const getEntityRelationships = (id) => {
+    if (!result.value) return []
+    // Get top 5 relationships where this entity is source or target
+    return result.value.relationships
+        .filter(r => r.source === id || r.target === id)
+        .map(r => ({
+            target: r.source === id ? r.target : r.source,
+            relation: r.relation,
+            type: r.type,
+            weight: r.weight
+        }))
+        .sort((a, b) => b.weight - a.weight)
+}
+
+// Interaction Handlers
+const scrollToEntity = (id) => {
+    setTimeout(() => {
+        const el = document.getElementById(`entity-${id}`)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+}
+
+const handleNodeSelect = (node) => {
+    if (node) {
+        showingExpertReport.value = false // Close expert sidebar
+        selectedEntityId.value = node.id
+        selectedRelation.value = null
+        scrollToEntity(node.id)
+    } else {
+        selectedEntityId.value = null
+    }
+}
+
+const handleNodeDoubleClick = (node) => {
+    if (node) {
+        showingExpertReport.value = false // Close expert sidebar
+        selectedEntityId.value = node.id
+    }
+}
+
+const handleEdgeSelect = (edge) => {
+    showingExpertReport.value = false
+    selectedRelation.value = edge
+    selectedEntityId.value = null
+}
+
+const handleClearSelection = () => {
+    selectedEntityId.value = null
+    selectedRelation.value = null
+    showingExpertReport.value = false // Close expert sidebar
+}
+
+const openEntityFromRelation = (id) => {
+    if (!id) return
+    showingExpertReport.value = false
+    selectedRelation.value = null
+    selectedEntityId.value = id
+    scrollToEntity(id)
+}
+
+const handleEntityClick = (e) => {
+    // If we want bidirectional, we need to tell GraphVisualizer to select this node
+    // But GraphVisualizer doesn't expose a method easily. 
+    // For now, just set local state. 
+    // Ideally, we'd pass 'selectedNodeId' prop to GraphVisualizer
+    showingExpertReport.value = false // Close expert sidebar
+    selectedEntityId.value = e.id
+}
+
+const relationTypeStats = computed(() => {
+  const counts = overview.value.relation_type_counts || {}
+  const total = Object.values(counts).reduce((sum, c) => sum + c, 0) || 1
+  const entries = Object.entries(counts).map(([type, count]) => ({
+    type,
+    label: {
+      family: '亲属',
+      social: '社交',
+      romance: '情感',
+      conflict: '冲突',
+      work: '工作',
+      other: '其他'
+    }[type] || type,
+    color: typeColorMap[type] || '#607D8B',
+    count,
+    percent: Math.round((count / total) * 100)
+  }))
+  return entries.sort((a, b) => b.count - a.count)
+})
 
 const statusText = computed(() => {
   const map = {
     idle: '待机',
-    processing: '大师推演中',
-    aggregating: '总结官汇总中',
-    completed: '推演已完成',
-    failed: '推演异常'
+    processing: '阅读分析中',
+    aggregating: '图谱构建中',
+    completed: '梳理完成',
+    failed: '分析异常'
   }
   return map[status.value] || status.value
 })
 
-const reportsCount = computed(() => Object.keys(reports.value).length)
+// File Methods
+const triggerFileInput = () => fileInput.value.click()
 
-// Methods
+const handleFileChange = (e) => {
+  const selected = e.target.files[0]
+  if (selected) validateAndSetFile(selected)
+}
+
+const handleDrop = (e) => {
+  isDragOver.value = false
+  const selected = e.dataTransfer.files[0]
+  if (selected) validateAndSetFile(selected)
+}
+
+const validateAndSetFile = (f) => {
+  if (!f.name.endsWith('.txt')) {
+    toast.error('仅支持 TXT 文件')
+    return
+  }
+  if (f.size > 20 * 1024 * 1024) { // 限制 20MB
+    toast.error('文件过大', '目前仅支持 20MB 以内的文本文件')
+    return
+  }
+  file.value = f
+}
+
+const formatSize = (bytes) => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// Watch for selection to update graph?
+// Ideally GraphVisualizer should take a prop 'selectedId'
+// Let's rely on the user clicking the graph for now, 
+// OR implemented bidirectional if we have time. 
+// For now, Graph -> UI is the main request.
+
+// Search Method
+const handleSearch = () => {
+  if (!searchQuery.value.trim() || !result.value) return
+  
+  const query = searchQuery.value.trim().toLowerCase()
+  const entities = result.value.entities || []
+  
+  // Find best match
+  const match = entities.find(e => {
+    const name = (e.id || e.name || '').toLowerCase()
+    return name === query
+  }) || entities.find(e => {
+    const name = (e.id || e.name || '').toLowerCase()
+    return name.includes(query)
+  })
+  
+  if (match) {
+    if (graphVisualizerRef.value) {
+      graphVisualizerRef.value.focusNode(match.id)
+      toast.success(`已定位: ${match.id}`)
+      searchQuery.value = '' // Clear search after successful find
+    }
+  } else {
+    toast.error('未找到相关人物')
+  }
+}
+
+// Analysis Methods
 const handleAnalyze = async () => {
   loading.value = true
-  reports.value = {}
-  summary.value = null
+  result.value = null
   progress.value = 0
   statusLogs.value = []
+  
+  const closeLoading = toast.loading('正在上传并启动分析...')
+  
   try {
-    const res = await analyzeFate(formData.value)
+    const formData = new FormData()
+    formData.append('file', file.value)
+    
+    const res = await analyzeFate(formData)
     if (res.success) {
       sessionId.value = res.session_id
       status.value = 'processing'
       startPolling()
       startTipRotation()
-    } else {
-      // 处理后端返回的 success: false 错误
-      toast.error(res.error || '启动失败', res.hint || '请检查输入信息')
     }
   } catch (err) {
-    // 处理 HTTP 错误 (400, 500 等)
-    const errorData = err.response?.data
-    const errorMessage = errorData?.error || '服务器连接失败'
-    const errorHint = errorData?.hint || (err.response?.status === 404 ? '接口不存在' : '请稍后重试')
-    
-    toast.error(errorMessage, errorHint)
-    console.error('Analysis failed:', err)
+    console.error('Analysis start failed:', err)
+    toast.error('启动失败', err.response?.data?.error || err.message)
   } finally {
     loading.value = false
+    closeLoading()
   }
 }
 
@@ -639,67 +932,217 @@ const startPolling = () => {
       const res = await getStatus(sessionId.value)
       if (res.success) {
         status.value = res.status
-        if (res.status_msg && res.status_msg !== statusMsg.value) {
-          statusMsg.value = res.status_msg
-          statusLogs.value.unshift({
-            time: new Date().toLocaleTimeString(),
-            msg: res.status_msg
-          })
-          if (statusLogs.value.length > 5) statusLogs.value.pop()
-        }
         progress.value = res.progress
         
-        // 如果 summary 存在，直接更新，减少一次请求
-        if (res.summary) {
-          summary.value = res.summary
+        if (res.message && res.message !== statusMsg.value) {
+          statusMsg.value = res.message
+          statusLogs.value.unshift({
+            time: new Date().toLocaleTimeString(),
+            msg: res.message
+          })
         }
-
-        // 如果已经完成但 summary 还没拿到，或者需要更新大师报告（小于49个时持续更新）
-        if (status.value === 'completed' || status.value === 'failed' || Object.keys(reports.value).length < 49) {
-          const fullRes = await getReport(sessionId.value)
-          if (fullRes.success) {
-            reports.value = fullRes.reports || {}
-            if (fullRes.summary) summary.value = fullRes.summary
-          }
-        }
-
-        if (status.value === 'completed' || status.value === 'failed') {
+        
+        if (res.status === 'completed') {
+          result.value = res.data
           clearInterval(pollTimer.value)
           stopTipRotation()
+        } else if (res.status === 'failed') {
+          clearInterval(pollTimer.value)
+          stopTipRotation()
+          toast.error('分析失败', res.error)
         }
       }
     } catch (err) {
-      console.error('轮询失败:', err)
+      console.error(err)
     }
   }, 2000)
 }
 
-const formatMarkdown = (text) => {
-  if (!text) return ''
-  return marked(text)
+const startTipRotation = () => {
+  if (tipTimer) clearInterval(tipTimer)
+  tipTimer = setInterval(() => {
+    currentTipIndex.value = (currentTipIndex.value + 1) % tips.length
+  }, 4000)
+}
+
+const stopTipRotation = () => {
+  if (tipTimer) clearInterval(tipTimer)
+}
+
+const resetSession = () => {
+  sessionId.value = null
+  status.value = 'idle'
+  result.value = null
+  file.value = null
+  progress.value = 0
+  statusLogs.value = []
+  experts.value = defaultExperts
+}
+
+const runMockPreview = () => {
+  loading.value = true
+  status.value = 'reading'
+  result.value = null // 先清空旧数据触发重载
+  statusMsg.value = '正在加载演示数据...'
+  sessionId.value = 'mock-session-001'
+  
+  // Simulate loading process
+  let p = 0
+  const timer = setInterval(() => {
+    p += 5
+    progress.value = p
+    if (p < 30) status.value = 'reading'
+    else if (p < 70) status.value = 'analyzing'
+    else status.value = 'aggregating'
+    
+    if (p >= 100) {
+      clearInterval(timer)
+      status.value = 'completed'
+      loading.value = false
+      
+      // Mock Data
+      const entities = [
+          { id: '叶文洁', type: 'protagonist', degree: 96, description: '红岸基地工程师，向宇宙发出第一次回应的人' },
+          { id: '汪淼', type: 'protagonist', degree: 92, description: '纳米材料专家，被卷入三体危机的科学家' },
+          { id: '史强', type: 'supporting', degree: 85, description: '刑警大史，直觉敏锐，汪淼的关键伙伴' },
+          { id: '申玉菲', type: 'antagonist', degree: 78, description: 'ETO成员，冷静而隐秘的组织骨干' },
+          { id: '迈克·伊文斯', type: 'antagonist', degree: 88, description: 'ETO领袖之一，与三体文明建立联系' },
+          { id: '杨卫宁', type: 'supporting', degree: 74, description: '红岸基地指挥官，叶文洁的重要同伴' },
+          { id: '杨冬', type: 'supporting', degree: 70, description: '叶文洁之女，科学界的核心人物' },
+          { id: '丁仪', type: 'supporting', degree: 76, description: '物理学家，推动汪淼理解科学异象' },
+          { id: '雷志成', type: 'antagonist', degree: 72, description: '文革时期的施压者，影响叶文洁命运' },
+          { id: '魏成', type: 'neutral', degree: 62, description: '数学家，沉迷于神秘的数列规律' },
+          { id: '红岸基地', type: 'neutral', degree: 68, description: '深空发射基地，叶文洁工作的关键场所' },
+          { id: '三体人', type: 'antagonist', degree: 98, description: '三体文明的信号回应者' }
+      ];
+
+      const relationships = [
+          { source: '叶文洁', target: '三体人', relation: '通信', type: 'conflict', weight: 10, evidence: '红岸基地向宇宙发送信息并收到回应' },
+          { source: '汪淼', target: '史强', relation: '搭档', type: 'work', weight: 9, evidence: '共同追查科学家离奇事件' },
+          { source: '汪淼', target: '申玉菲', relation: '被引导', type: 'social', weight: 8, evidence: '被带入三体游戏与ETO线索' },
+          { source: '申玉菲', target: '迈克·伊文斯', relation: '同盟', type: 'work', weight: 7, evidence: '共同推动ETO行动' },
+          { source: '叶文洁', target: '杨卫宁', relation: '伴侣', type: 'romance', weight: 6, evidence: '红岸时期共同生活' },
+          { source: '叶文洁', target: '杨冬', relation: '母女', type: 'family', weight: 9, evidence: '亲生关系影响人物选择' },
+          { source: '叶文洁', target: '雷志成', relation: '迫害', type: 'conflict', weight: 8, evidence: '文革时期的打击与利用' },
+          { source: '汪淼', target: '丁仪', relation: '好友', type: 'social', weight: 7, evidence: '共同探讨科学异象与物理困境' },
+          { source: '汪淼', target: '迈克·伊文斯', relation: '对峙', type: 'conflict', weight: 8, evidence: '古筝行动暴露ETO核心' },
+          { source: '叶文洁', target: '红岸基地', relation: '任职', type: 'work', weight: 6, evidence: '负责深空通讯项目' },
+          { source: '魏成', target: '汪淼', relation: '启发', type: 'social', weight: 5, evidence: '数列与宇宙规律的讨论' }
+      ];
+
+      // Procedurally generate more nodes (Soldiers, Civilians, ETO Members)
+      const factions = ['ETO', 'PDC', 'Fleet', 'Civilian'];
+      for (let i = 0; i < 50; i++) {
+          const id = `Unit-${100 + i}`;
+          const faction = factions[Math.floor(Math.random() * factions.length)];
+          const type = faction === 'ETO' ? 'antagonist' : (faction === 'Civilian' ? 'neutral' : 'supporting');
+          
+          entities.push({
+              id,
+              type,
+              degree: Math.floor(Math.random() * 20 + 10),
+              description: `Generated ${faction} member unit.`
+          });
+
+          // Connect to existing main characters
+          const target = entities[Math.floor(Math.random() * 12)]; // Connect to main 12
+          relationships.push({
+              source: id,
+              target: target.id,
+              relation: '隶属',
+              type: 'work',
+              weight: Math.floor(Math.random() * 5 + 1),
+              evidence: 'Automated connection'
+          });
+          
+          // Connect to another random node to create clusters
+          if (Math.random() > 0.5 && i > 0) {
+               const target2 = entities[12 + Math.floor(Math.random() * i)];
+               relationships.push({
+                  source: id,
+                  target: target2.id,
+                  relation: '同僚',
+                  type: 'social',
+                  weight: 3,
+                  evidence: 'Automated connection'
+               });
+          }
+      }
+
+      result.value = {
+        entities,
+        relationships,
+        overview: {
+          overview_text: '《三体》第一部聚焦叶文洁的抉择与汪淼的追寻，红岸基地的信号引来宇宙回音，ETO与科学危机交织出人类文明的命运拐点。',
+          entity_count: entities.length,
+          relationship_count: relationships.length,
+          top_entities: [
+            { id: '叶文洁', type: 'protagonist', degree: 96 },
+            { id: '汪淼', type: 'protagonist', degree: 92 },
+            { id: '迈克·伊文斯', type: 'antagonist', degree: 88 }
+          ],
+          relation_type_counts: {
+            conflict: 4,
+            romance: 1,
+            work: 3,
+            social: 3,
+            family: 1
+          },
+          reader_questions: [
+             '叶文洁为何选择向宇宙发出回应？',
+             '三体游戏的目的究竟是什么？',
+             'ETO内部的分裂将如何影响人类？'
+          ],
+          reader_takeaways: [
+             '文明交流的代价',
+             '科学信念的崩塌与重建',
+             '人与文明的选择'
+          ],
+          storyline_lines: [
+             '文革创伤 -> 叶文洁进入红岸基地',
+             '红岸信号发送 -> 三体回应',
+             '三体游戏引导汪淼 -> 科学家离奇事件',
+             '古筝行动 -> ETO暴露',
+             '叶文洁坦白 -> 人类迎来危机'
+          ],
+          protagonist_connections: [
+             { target: '史强', relation: '搭档', type: 'work', weight: 9 },
+             { target: '申玉菲', relation: '线索', type: 'social', weight: 8 },
+             { target: '丁仪', relation: '好友', type: 'social', weight: 7 }
+          ],
+          protagonists: ['汪淼', '叶文洁']
+        }
+      }
+      
+      experts.value = defaultExperts.map(e => ({
+         ...e,
+         description: `${e.name} 已完成分析，生成了 3 条洞察。`
+      }))
+    }
+  }, 100)
 }
 
 onMounted(async () => {
-  const res = await listMasters()
-  if (res.success) {
-    masters.value = res.data
-  }
+  experts.value = defaultExperts
 })
 
 onUnmounted(() => {
   if (pollTimer.value) clearInterval(pollTimer.value)
+  if (tipTimer) clearInterval(tipTimer)
 })
 </script>
 
 <style scoped>
 .fortune-view {
+  width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #0A0A0B;
+  background-color: #000; /* Fallback */
   color: #E0E0E0;
-  font-family: 'Space Grotesk', -apple-system, sans-serif;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
+  position: relative;
 }
 
 .app-header {
@@ -708,108 +1151,19 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #1F1F22;
-  background: #0D0D0F;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(13, 13, 15, 0.75);
+  backdrop-filter: blur(12px);
+  z-index: 10;
 }
 
 .brand {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Consolas', 'Monaco', monospace;
   font-weight: 800;
   font-size: 20px;
   letter-spacing: 2px;
   color: #FFF;
   cursor: pointer;
-  background: linear-gradient(90deg, #FFF, #888);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* 防命薄机制样式 */
-.fate-shield-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 24px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.fate-shield-toggle.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.fate-shield-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #FFD700;
-  cursor: inherit;
-}
-
-.fate-shield-toggle .toggle-label {
-  font-size: 13px;
-  color: #888;
-  transition: color 0.2s;
-}
-
-.fate-shield-toggle:not(.disabled):hover .toggle-label {
-  color: #FFD700;
-}
-
-.fate-shield-toggle input:checked + .toggle-label {
-  color: #FFD700;
-}
-
-/* 防命薄弹窗样式 */
-.fate-shield-modal .fate-shield-content {
-  max-width: 400px;
-  text-align: center;
-}
-
-.fate-shield-content .modal-header {
-  flex-direction: column;
-  gap: 16px;
-}
-
-.fate-shield-content .modal-avatar {
-  font-size: 48px;
-  background: none;
-}
-
-.fate-shield-content .shield-message {
-  padding: 24px;
-  background: rgba(255, 215, 0, 0.1);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  margin-bottom: 24px;
-}
-
-.fate-shield-content .shield-message p {
-  color: #E0E0E0;
-  line-height: 1.8;
-  font-size: 15px;
-}
-
-.fate-shield-content .shield-message strong {
-  color: #FFD700;
-}
-
-.fate-shield-content .confirm-btn {
-  width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.fate-shield-content .confirm-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
 }
 
 .status-badge {
@@ -830,7 +1184,6 @@ onUnmounted(() => {
   background: #444;
 }
 .dot.processing { background: #FF9800; animation: pulse 1s infinite; }
-.dot.aggregating { background: #2196F3; animation: pulse 1s infinite; }
 .dot.completed { background: #4CAF50; }
 
 @keyframes pulse { 50% { opacity: 0.4; } }
@@ -839,22 +1192,138 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   overflow: hidden;
+  height: calc(100vh - 64px);
 }
 
 /* Left Panel */
 .left-panel {
-  width: 480px;
-  min-width: 480px;
-  border-right: 1px solid #1F1F22;
+  width: 400px;
+  min-width: 400px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  background: #0D0D0F;
+  background: rgba(13, 13, 15, 0.65);
+  backdrop-filter: blur(12px);
+  z-index: 5;
 }
 
 .input-card {
+  background: rgba(20, 20, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   padding: 24px;
-  border-bottom: 1px solid #1F1F22;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.analysis-running-card {
+  background: rgba(20, 20, 22, 0.6);
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  animation: pulse-border 2s infinite;
+  backdrop-filter: blur(5px);
+}
+
+@keyframes pulse-border {
+  0% { border-color: #3b82f644; }
+  50% { border-color: #3b82f6ff; }
+  100% { border-color: #3b82f644; }
+}
+
+.running-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.running-icon {
+  font-size: 24px;
+  animation: spin 4s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.file-summary {
+  font-size: 14px;
+  color: #8E8E93;
+  margin-bottom: 12px;
+}
+
+.file-summary .value {
+  color: #FFFFFF;
+  margin-left: 8px;
+}
+
+.running-tips {
+  min-height: 48px;
+  font-size: 14px;
+  color: #3b82f6;
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+/* Interaction Styles */
+.entity-card.is-selected {
+  border-color: #FFF;
+  background: #2A2A2F;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+}
+
+.entity-card.is-dimmed {
+  opacity: 0.3;
+  filter: grayscale(0.5);
+}
+
+.storyline-item.is-dimmed {
+  opacity: 0.3;
+}
+
+.cluster-item.is-selected {
+  border-color: #FFF;
+  background: #2A2A2F;
+}
+
+.highlight-text {
+  color: #FFF;
+  font-weight: bold;
+  text-decoration: underline;
+  text-decoration-color: #FFD700;
+}
+
+.relation-item.is-highlighted {
+  border-color: #FFD700;
+  background: #2A2A10;
+}
+
+.more-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  padding: 8px;
+  font-style: italic;
+}
+
+.cancel-btn {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid #3A3A3C;
+  color: #8E8E93;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  border-color: #FF453A;
+  color: #FF453A;
 }
 
 .section-title {
@@ -866,42 +1335,61 @@ onUnmounted(() => {
   letter-spacing: 1px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.form-item {
+/* Upload Area */
+.upload-area {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.02);
+  min-height: 160px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
 }
 
-.form-item label {
-  font-size: 11px;
-  color: #888;
-  text-transform: uppercase;
+.upload-area:hover, .upload-area.is-dragover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
 }
 
-.form-item input, .form-item select {
-  background: #1A1A1D;
-  border: 1px solid #2A2A2F;
-  color: #FFF;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 14px;
+.upload-area.has-file {
+  border-style: solid;
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.hidden-input { display: none; }
+
+.upload-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+.upload-placeholder p { font-size: 14px; color: #DDD; margin-bottom: 4px; }
+.sub-text { font-size: 12px; color: #666; }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
 }
 
-.form-item input[type="number"] {
-  -moz-appearance: textfield;
+.file-icon { font-size: 24px; }
+.file-details { flex: 1; text-align: left; overflow: hidden; }
+.file-name { display: block; font-size: 14px; color: #FFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-size { font-size: 12px; color: #888; }
+
+.remove-file {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
 }
-.form-item input::-webkit-outer-spin-button,
-.form-item input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+
+.remove-file:hover { color: #FF5252; }
 
 .start-btn {
   width: 100%;
@@ -922,48 +1410,42 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+/* Master Hall */
 .master-hall {
   padding: 24px;
   flex: 1;
-}
-
-.hall-header {
-  margin-bottom: 24px;
+  overflow-y: auto;
 }
 
 .progress-container {
   margin-top: 16px;
-  background: #141417;
+  background: rgba(20, 20, 22, 0.6);
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #1F1F22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .progress-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 10px;
 }
 
-.progress-percent {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 18px;
-  color: #FFF;
-}
-
-.progress-msg {
-  font-size: 12px;
-  color: #888;
-  font-style: italic;
-}
+.progress-percent { font-family: 'Consolas', 'Monaco', monospace; font-weight: 800; color: #FFF; text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+.progress-msg { font-size: 12px; color: #BBB; }
 
 .progress-bar {
-  height: 6px;
-  background: #1A1A1D;
-  border-radius: 3px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
   overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #FFF;
+  box-shadow: 0 0 10px #FFF;
+  transition: width 0.3s;
 }
 
 .progress-logs {
@@ -974,920 +1456,836 @@ onUnmounted(() => {
 }
 
 .log-item {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: #444;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  color: #666;
   display: flex;
-  gap: 10px;
-  transition: all 0.3s;
+  gap: 8px;
 }
 
-.first-log {
-  color: #AAA;
-}
-
-.graph-log {
-  color: #64B5F6 !important; /* 科技蓝色 */
-  font-weight: 500;
-}
-
-.log-time {
-  flex-shrink: 0;
-  width: 70px;
-}
-
-.log-msg {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #444, #FFF, #444);
-  background-size: 200% 100%;
-  animation: shine 2s linear infinite;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes shine {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+.first-log { color: #BBB; text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+.log-time { color: #888; min-width: 50px; }
 
 .master-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
+  margin-top: 20px;
 }
 
 .master-card {
-  background: #141417;
-  border: 1px solid #1F1F22;
+  background: rgba(20, 20, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   padding: 12px;
   border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
+  gap: 12px;
+  transition: all 0.3s;
 }
 
-.master-card:hover { border-color: #3A3A3F; background: #1A1A1D; }
-.master-card.is-active { border-color: #FFF; background: #1F1F22; }
-.master-card.is-pending { opacity: 0.6; }
-.master-card.is-done { border-color: rgba(76, 175, 80, 0.3); }
+.master-card:hover {
+  background: rgba(30, 30, 35, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
 
 .master-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: #2A2A2F;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
   color: #FFF;
+  font-weight: 700;
 }
 
-.master-info { overflow: hidden; }
-.master-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.master-camp { font-size: 10px; color: #666; }
-
-.check-icon {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  color: #4CAF50;
-  font-size: 12px;
-  font-weight: bold;
-}
+.master-name { font-size: 14px; font-weight: 600; color: #DDD; }
+.master-camp { font-size: 12px; color: #666; }
+.master-desc { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.4; }
 
 /* Right Panel */
 .right-panel {
   flex: 1;
-  background: #080809;
+  height: 100%;
+  background: transparent;
   position: relative;
   display: flex;
   flex-direction: column;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.right-panel.is-fullscreen {
+  flex: none;
+  width: 100vw;
+  height: calc(100vh - 64px);
 }
 
 .empty-state {
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 
-.empty-content h3 { font-size: 24px; margin-bottom: 12px; color: #FFF; }
-.empty-content p { color: #666; max-width: 300px; line-height: 1.6; }
+.empty-content h3 { font-size: 24px; color: #FFF; margin-bottom: 12px; }
+.empty-content p { color: #666; }
+
+.primary-btn, .secondary-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-btn {
+  background: #FFF;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFF;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
 
 .report-container {
   height: 100%;
-  overflow-y: auto;
-  padding: 40px;
+  padding: 24px;
+  overflow: hidden;
+  transition: padding 0.5s;
+  min-height: 0;
 }
 
-.active-report {
-  background: #0D0D0F;
-  border: 1px solid #1F1F22;
-  border-radius: 12px;
-  padding: 32px;
-  animation: slideUp 0.4s ease-out;
+.report-container.no-padding {
+  padding: 0;
 }
-
-.report-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.master-tag {
-  background: #FFF;
-  color: #000;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.close-report {
-  background: transparent;
-  border: 1px solid #333;
-  color: #888;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.global-summary {
-  max-width: 1000px; /* 增加最大宽度以适配大图 */
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.summary-header {
-  margin-bottom: 32px;
-  text-align: center;
-}
-
-.summary-title { font-size: 32px; font-weight: 800; color: #FFF; margin-bottom: 12px; }
-.summary-badge { display: inline-block; background: #1A1A1D; color: #888; padding: 4px 16px; border-radius: 20px; font-size: 12px; border: 1px solid #2A2A2F; }
 
 .graph-full-section {
-  background: #141417;
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid #1F1F22;
-}
-
-.section-header {
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-size: 18px;
-  color: #FFF;
-  margin: 0;
-}
-
-.section-subtitle {
-  font-size: 12px;
-  color: #666;
-  margin-top: 4px;
-}
-
-.graph-visual-full {
-  width: 100%;
-  min-height: 600px;
-  border-radius: 12px;
-  /* 允许内部 SVG 完整展示，不被外层裁剪 */
-  overflow: visible;
-  position: relative;
-}
-
-.radar-visual-wrapper {
-  width: 100%;
-  height: 600px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #080809;
-}
-
-/* Ritual Ceremony Styles */
-.ritual-ceremony {
-  height: 600px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: #050505;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid #1a1a1d;
-}
-
-.ritual-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0.3;
-}
-
-.scan-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #FFD700, transparent);
-  animation: scanMove 3s infinite linear;
-}
-
-@keyframes scanMove {
-  from { top: 0; }
-  to { top: 100%; }
-}
-
-.orbit-circles div {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.orbit-1 { width: 200px; height: 200px; animation: rotateCW 10s linear infinite; }
-.orbit-2 { width: 400px; height: 400px; animation: rotateCCW 15s linear infinite; border-style: dashed !important; }
-.orbit-3 { width: 600px; height: 600px; animation: rotateCW 20s linear infinite; }
-
-@keyframes rotateCW { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-@keyframes rotateCCW { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(-360deg); } }
-
-.ritual-content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-}
-
-.ritual-spinner {
-  width: 60px;
-  height: 60px;
-  border: 3px solid rgba(255, 215, 0, 0.1);
-  border-top-color: #FFD700;
-  border-radius: 50%;
-  animation: spin 1s infinite linear;
-  margin: 0 auto 24px;
-}
-
-.ritual-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #FFF;
-  letter-spacing: 4px;
-  margin-bottom: 16px;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-}
-
-.ritual-msg {
-  color: #888;
-  font-style: italic;
-  font-size: 14px;
-  margin-bottom: 24px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.summary-block {
-  background: #141417;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #1F1F22;
-}
-
-.summary-block h3 { font-size: 16px; color: #FFF; margin-bottom: 16px; }
-.summary-block ul { list-style: none; padding: 0; }
-.summary-block li {
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  color: #AAA;
-  position: relative;
-  padding-left: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.item-impact {
-  font-size: 10px;
-  background: rgba(255, 215, 0, 0.1);
-  color: #FFD700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  margin-left: 10px;
-  white-space: nowrap;
-}
-
-.conflict-item .item-impact {
-  background: rgba(255, 82, 82, 0.1);
-  color: #FF5252;
-  border-color: rgba(255, 82, 82, 0.2);
-}
-.summary-block li::before { content: "•"; position: absolute; left: 0; color: #FFF; }
-.conflict-item { color: #FFAB91 !important; }
-
-.advice-section { margin-top: 40px; }
-.advice-section h3 { margin-bottom: 20px; text-align: center; }
-.advice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.advice-card { padding: 20px; border-radius: 12px; border: 1px solid #1F1F22; }
-.advice-card h4 { margin-bottom: 12px; font-size: 14px; text-transform: uppercase; }
-.advice-card p { font-size: 13px; line-height: 1.5; color: #888; margin-bottom: 8px; }
-
-.career { border-top: 3px solid #2196F3; }
-.wealth { border-top: 3px solid #FFC107; }
-.emotion { border-top: 3px solid #E91E63; }
-
-.graph-placeholder { margin-top: 48px; }
-.graph-visual { background: #0D0D0F; border: 1px dashed #333; border-radius: 12px; height: 300px; display: flex; align-items: center; justify-content: center; }
-.visual-placeholder { text-align: center; color: #444; font-size: 14px; line-height: 2; }
-
-.summary-loading {
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-
-.spinner { width: 40px; height: 40px; border: 3px solid #222; border-top-color: #FFF; border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-.loading-stats {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: #666;
-}
-
-/* 天机贴士样式 */
-.fortune-tip-container {
-  margin: 20px 0;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fortune-tip {
-  background: rgba(255, 215, 0, 0.05);
-  border: 1px solid rgba(255, 215, 0, 0.1);
-  padding: 12px 20px;
-  border-radius: 8px;
-  max-width: 400px;
-  text-align: center;
-}
-
-.tip-label {
-  color: #FFD700;
-  font-weight: bold;
-  margin-right: 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.tip-content {
-  color: #AAA;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* Transition Animations */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.summary-text {
-  margin-top: 32px;
-}
-
-/* Markdown Styles */
-.markdown-body { color: #BBB; line-height: 1.8; font-size: 15px; }
-.markdown-body h2 { color: #FFF; margin: 24px 0 16px; }
-.markdown-body p { margin-bottom: 16px; }
-.markdown-body blockquote { border-left: 4px solid #333; padding-left: 16px; color: #888; font-style: italic; }
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: #0D0D0F;
-  border: 1px solid #1F1F22;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
-  animation: modalIn 0.3s ease-out;
-}
-
-@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-.modal-header {
-  padding: 24px;
-  border-bottom: 1px solid #1F1F22;
-  display: flex;
-  align-items: center;
-  gap: 16px;
   position: relative;
+  min-height: 0;
 }
 
-.modal-avatar {
-  width: 48px;
-  height: 48px;
-  background: #2A2A2F;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 20px;
-  color: #FFF;
-}
-
-.modal-title-group h3 { font-size: 20px; color: #FFF; margin-bottom: 4px; }
-.modal-camp { font-size: 13px; color: #666; }
-
-.close-modal {
+.section-header-overlay {
   position: absolute;
-  right: 20px;
   top: 20px;
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 28px;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.info-section { margin-bottom: 24px; }
-.info-section h4 { font-size: 14px; color: #FFF; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.info-section p { font-size: 15px; color: #AAA; line-height: 1.6; }
-
-.report-section { margin-top: 32px; border-top: 1px solid #1F1F22; padding-top: 24px; }
-.report-section h4 { font-size: 14px; color: #FFF; margin-bottom: 16px; text-transform: uppercase; }
-
-/* Tab Navigation Styles */
-.year-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #1F1F22;
-  padding-bottom: 12px;
-  overflow-x: auto;
-}
-
-.tab-item {
-  padding: 8px 16px;
-  border-radius: 6px;
-  background: #141417;
-  color: #888;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid #1F1F22;
-  white-space: nowrap;
-}
-
-.tab-item:hover {
-  background: #1A1A1D;
-  color: #BBB;
-}
-
-.tab-item.active {
-  background: #FFF;
-  color: #000;
-  font-weight: 700;
-  border-color: #FFF;
-}
-
-.tab-content-area {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.item-desc {
-  font-size: 12px;
-  color: #666;
-  font-style: italic;
-  margin-left: 4px;
-}
-
-.empty-list {
-  color: #666;
-  font-style: italic;
-  font-size: 13px;
-  padding: 10px 0;
-}
-
-/* ========================================
-   全案推演报告表格样式 - 酷炫深色主题
-   ======================================== */
-.fate-report-table {
-  margin-top: 32px;
-  background: linear-gradient(180deg, #0D0D10 0%, #080809 100%);
-  border-radius: 16px;
-  border: 1px solid #1A1A1F;
-  overflow: hidden;
-  box-shadow: 
-    0 4px 24px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.table-header {
-  padding: 20px 24px;
+  left: 20px;
+  right: 20px;
+  z-index: 50;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #1A1A1F;
-  background: linear-gradient(90deg, rgba(20, 20, 25, 0.8) 0%, rgba(15, 15, 18, 0.8) 100%);
+  pointer-events: none;
 }
 
-.table-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #FFF;
-  margin: 0;
-}
-
-.title-icon {
-  font-size: 22px;
-}
-
-.table-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 20px;
-  background: rgba(30, 30, 35, 0.6);
-  border: 1px solid #2A2A30;
-  color: #888;
-  font-size: 13px;
+.back-btn {
+  pointer-events: auto;
   cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.filter-btn:hover {
-  background: rgba(50, 50, 60, 0.6);
-  color: #BBB;
-  border-color: #3A3A45;
-}
-
-.filter-btn.active {
-  background: linear-gradient(135deg, #2D2D35 0%, #1F1F25 100%);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #333;
   color: #FFF;
-  border-color: #FFD700;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+  font-size: 14px;
+  transition: all 0.2s;
 }
 
-.btn-icon {
+.back-btn:hover {
+  background: #333;
+  border-color: #666;
+}
+
+.stats-badge {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  color: #888;
+  font-size: 12px;
+}
+
+.mode-btn {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  color: #888;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: #333;
+  color: #DDD;
+}
+
+.mode-btn.icon-only {
+  padding: 6px 8px;
   font-size: 14px;
 }
 
-.table-container {
-  padding: 20px;
-  max-height: 600px;
-  overflow-y: auto;
+.mode-btn.active {
+  background: #FFD700;
+  color: #000;
+  border-color: #FFD700;
+  font-weight: bold;
 }
 
-.table-container::-webkit-scrollbar {
-  width: 6px;
+.graph-visual-full {
+  flex: 1;
+  height: 100%;
+  min-height: 500px;
+  background: transparent;
+  border-radius: 12px;
+  border: 1px solid #1F1F22;
+  overflow: hidden;
+  position: relative;
+  z-index: 20;
 }
 
-.table-container::-webkit-scrollbar-track {
-  background: #0A0A0C;
-  border-radius: 3px;
+.report-container.no-padding .graph-visual-full {
+  border-radius: 0;
+  border: none;
 }
 
-.table-container::-webkit-scrollbar-thumb {
-  background: #2A2A30;
-  border-radius: 3px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-  background: #3A3A40;
-}
-
-/* 年份分区 */
-.year-section {
-  margin-bottom: 32px;
-}
-
-.year-section:last-child {
-  margin-bottom: 0;
-}
-
-.year-header {
-  display: flex;
-  align-items: center;
+.summary-panel {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
   gap: 16px;
-  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(18, 18, 22, 0.95), rgba(10, 10, 12, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  max-height: 40vh;
+  overflow: auto;
 }
 
-.year-badge {
-  padding: 8px 20px;
-  background: linear-gradient(135deg, #1A1A20 0%, #141418 100%);
-  border: 1px solid #2A2A35;
-  border-radius: 24px;
-  font-size: 15px;
+.summary-block {
+  background: linear-gradient(180deg, rgba(24, 24, 28, 0.9), rgba(16, 16, 20, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.summary-block:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.summary-title {
+  font-size: 14px;
   font-weight: 700;
   color: #FFF;
   letter-spacing: 1px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.year-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, #2A2A35 0%, transparent 100%);
+.summary-text {
+  color: #B8B8C0;
+  line-height: 1.7;
+  font-size: 14px;
 }
 
-/* 维度卡片网格 */
-.dimensions-grid {
+.summary-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.dimension-card {
-  background: linear-gradient(160deg, #12121A 0%, #0C0C10 100%);
-  border: 1px solid #1F1F28;
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.3s ease;
-}
-
-.dimension-card:hover {
-  border-color: #2A2A38;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
-}
-
-.dim-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #1A1A25;
-}
-
-.dim-icon {
-  font-size: 20px;
-}
-
-.dim-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #EEE;
-}
-
-/* 洞察分组 */
-.insight-group {
-  margin-bottom: 16px;
-}
-
-.insight-group:last-child {
-  margin-bottom: 0;
-}
-
-.group-label {
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  font-size: 12px;
-  color: #777;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.label-dot {
+.stat-item {
+  background: rgba(10, 10, 14, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.type-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.type-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #C7C7D1;
+}
+
+.type-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
 
-.label-dot.consensus {
-  background: linear-gradient(135deg, #FFD700, #FFC107);
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-}
-
-.label-dot.unique {
-  background: linear-gradient(135deg, #29B6F6, #03A9F4);
-  box-shadow: 0 0 8px rgba(41, 182, 246, 0.5);
-}
-
-.label-dot.variable {
-  background: linear-gradient(135deg, #FF5252, #F44336);
-  box-shadow: 0 0 8px rgba(255, 82, 82, 0.5);
-}
-
-/* 洞察项目 */
-.insight-item {
-  margin-bottom: 8px;
-  background: rgba(20, 20, 28, 0.5);
-  border-radius: 8px;
-  border: 1px solid #1A1A25;
+.type-bar {
+  background: rgba(8, 8, 12, 0.9);
+  border-radius: 999px;
+  height: 8px;
   overflow: hidden;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.insight-item:hover {
-  border-color: #2A2A38;
-  background: rgba(25, 25, 35, 0.6);
+.type-bar-fill {
+  height: 100%;
+  border-radius: 999px;
 }
 
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.item-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #DDD;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item-title.unique-title {
-  color: #29B6F6;
-}
-
-.item-title.variable-title {
-  color: #FF5252;
-}
-
-.item-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.impact-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
+.type-count {
   font-size: 11px;
-  font-weight: 600;
-}
-
-.impact-badge.high {
-  background: rgba(255, 215, 0, 0.15);
-  color: #FFD700;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.impact-badge.medium {
-  background: rgba(41, 182, 246, 0.15);
-  color: #29B6F6;
-  border: 1px solid rgba(41, 182, 246, 0.3);
-}
-
-.impact-badge.warning {
-  background: rgba(255, 82, 82, 0.15);
-  color: #FF5252;
-  border: 1px solid rgba(255, 82, 82, 0.3);
-}
-
-.expand-icon {
-  font-size: 10px;
-  color: #555;
-  transition: transform 0.2s ease;
-}
-
-/* 展开的详细内容 */
-.item-detail {
-  padding: 0 14px 14px;
-  border-top: 1px solid #1A1A25;
-  background: rgba(15, 15, 22, 0.5);
-}
-
-.item-detail.variable-detail {
-  background: rgba(255, 82, 82, 0.03);
-  border-top-color: rgba(255, 82, 82, 0.15);
-}
-
-.detail-text {
-  font-size: 13px;
-  line-height: 1.7;
-  color: #AAA;
-  margin: 12px 0 8px;
-}
-
-.detail-source {
-  display: block;
-  font-size: 12px;
-  color: #666;
-  font-style: italic;
+  color: #8E8E93;
   text-align: right;
 }
 
-.empty-dim {
-  text-align: center;
-  color: #555;
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.entity-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(10, 10, 14, 0.9);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.entity-card.role-protagonist { border-color: #FFD70055; box-shadow: 0 0 12px #FFD70022; }
+.entity-card.role-antagonist { border-color: #F5005755; box-shadow: 0 0 12px #F5005722; }
+.entity-card.role-supporting { border-color: #00E5FF55; box-shadow: 0 0 12px #00E5FF22; }
+
+.entity-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.entity-role {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.entity-degree {
+  font-size: 11px;
+  color: #B0BEC5;
+}
+
+.entity-desc {
+  font-size: 12px;
+  color: #C7C7D1;
+  margin-top: 6px;
+}
+
+.relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.relation-item {
+  background: rgba(10, 10, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.relation-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.relation-actors {
+  font-size: 12px;
+  color: #E0E0E0;
+}
+
+.relation-weight {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.relation-evidence {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #B8B8C0;
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.reader-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader-subtitle {
+  font-size: 11px;
+  color: #8E8E93;
+  letter-spacing: 1px;
+}
+
+.reader-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader-item {
+  background: rgba(10, 10, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #C7C7D1;
+  line-height: 1.5;
+}
+
+.storyline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.storyline-item {
+  background: rgba(10, 10, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #C7C7D1;
+  line-height: 1.5;
+}
+
+.cluster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cluster-item {
+  background: rgba(10, 10, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* Entity Styles */
+.expert-modal-header.role-protagonist { border-bottom-color: #FFD700; background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%); }
+.expert-modal-header.role-antagonist { border-bottom-color: #FF2A68; background: linear-gradient(90deg, rgba(255, 42, 104, 0.1) 0%, transparent 100%); }
+.expert-modal-header.role-supporting { border-bottom-color: #00F0FF; background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, transparent 100%); }
+
+.relation-list-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.relation-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
+  color: #CCC;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+.rel-target { font-weight: 600; color: #FFF; }
+.rel-arrow { color: #666; font-size: 11px; }
+.rel-type { font-weight: 600; font-size: 11px; }
+.no-data { color: #666; font-size: 12px; font-style: italic; }
+.quote { font-style: italic; color: #E0E0E0; font-family: "Georgia", serif; border-left: 2px solid #666; padding-left: 12px; }
+
+/* Expert Modal */
+.expert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expert-modal {
+  width: 500px;
+  background: rgba(20, 24, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.expert-modal-header {
   padding: 20px;
-  font-style: italic;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
 }
 
-/* 展开动画 */
-.slide-enter-active {
-  transition: all 0.25s ease-out;
+.expert-info .name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFF;
+}
+.expert-info .role {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
 }
 
-.slide-leave-active {
-  transition: all 0.2s ease-in;
+.close-btn {
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+.close-btn:hover { color: #FFF; }
+
+.expert-modal-content {
+  padding: 24px;
 }
 
-.slide-enter-from {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-8px);
+.report-section {
+  margin-bottom: 24px;
+}
+.report-section:last-child { margin-bottom: 0; }
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  margin-bottom: 8px;
 }
 
-.slide-leave-to {
-  opacity: 0;
-  max-height: 0;
+.section-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #DDD;
 }
 
-.slide-enter-to,
-.slide-leave-from {
-  opacity: 1;
-  max-height: 500px;
+.related-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #444;
+  border-radius: 12px;
+}
+
+.expert-view-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.expert-view-card {
+  background: rgba(20, 20, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.expert-view-card:hover {
+  background: rgba(30, 30, 35, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.expert-view-card.is-selected {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.05);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+}
+
+.expert-view-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFF;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.expert-view-role {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.expert-view-desc {
+  font-size: 12px;
+  color: #C7C7D1;
+  line-height: 1.5;
+}
+
+.expert-view-action {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.action-btn {
+  font-size: 11px;
+  color: #FFD700;
+  font-weight: 600;
+}
+
+.cluster-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.cluster-size {
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.cluster-members {
+  font-size: 12px;
+  color: #C7C7D1;
+  line-height: 1.5;
+}
+
+/* Loading */
+.ritual-ceremony {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ritual-title { font-size: 24px; color: #FFF; margin-bottom: 16px; }
+.ritual-msg { color: #888; margin-bottom: 32px; }
+
+.fortune-tip-container {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tip-label { color: #FFD700; margin-right: 8px; font-weight: bold; }
+.tip-content { color: #CCC; }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* Entity Sidebar */
+.entity-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100%;
+  background: rgba(18, 18, 22, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+}
+
+.sidebar-header.role-protagonist { border-bottom-color: #FFD700; }
+.sidebar-header.role-antagonist { border-bottom-color: #FF2A68; }
+.sidebar-header.role-supporting { border-bottom-color: #00F0FF; }
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.relation-actors-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #E5E5EA;
+}
+
+.relation-arrow {
+  color: #8E8E93;
+}
+
+.entity-link {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.entity-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.relation-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Slide Transition */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  transform: translateX(100%);
+}
+
+/* Search Bar */
+.search-bar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 4px 8px;
+  margin-right: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: #FFF;
+  font-size: 13px;
+  width: 120px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.search-bar input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.search-btn:hover {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.search-btn .icon {
+  font-size: 14px;
 }
 </style>

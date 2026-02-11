@@ -106,12 +106,20 @@ const handleToastEvent = (e) => {
   }
 }
 
+const handleToastCloseEvent = (e) => {
+  if (e.detail && e.detail.id) {
+    removeToast(e.detail.id)
+  }
+}
+
 onMounted(() => {
   window.addEventListener('app-toast', handleToastEvent)
+  window.addEventListener('app-toast-close', handleToastCloseEvent)
 })
 
 onUnmounted(() => {
   window.removeEventListener('app-toast', handleToastEvent)
+  window.removeEventListener('app-toast-close', handleToastCloseEvent)
 })
 
 // 暴露方法

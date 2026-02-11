@@ -1,5 +1,5 @@
 """
-万年 Backend 启动入口
+衣鱼 Backend 启动入口
 """
 
 import os
@@ -15,7 +15,7 @@ from app.config import Config
 def main():
     """主函数"""
     print("\n" + "="*50)
-    print("Starting Wannian Backend Service...")
+    print("Starting Trace Backend Service...")
     print(f"Current Working Directory: {os.getcwd()}")
     
     # 检查 .env 文件是否存在
@@ -25,16 +25,15 @@ def main():
     else:
         print(f"Config Not Found: {env_path}")
 
-    # 验证配置 (改为仅警告，不阻塞启动)
+    # 验证配置
     errors = Config.validate()
     if errors:
-        print("\n⚠️  Configuration Warning: Some API keys are missing")
+        print("\nStartup Failed: Config validation failed")
         for err in errors:
             print(f"  - {err}")
-        print("The server will start, but fortune analysis will require configuration in .env")
+        print("\nPlease ensure .env file is configured correctly with LLM_API_KEY.")
         print("="*50 + "\n")
-    else:
-        print("✅ Config validation passed")
+        sys.exit(1)
     
     # 创建应用
     try:
@@ -46,7 +45,7 @@ def main():
     
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    port = int(os.environ.get('FLASK_PORT', 5002))
+    port = int(os.environ.get('FLASK_PORT', 5003))
     
     print(f"Service running at: http://{host}:{port}")
     print("="*50 + "\n")
@@ -57,4 +56,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

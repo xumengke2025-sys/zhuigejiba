@@ -1,0 +1,254 @@
+{
+  "丛林": {
+    "lat": 28.9946656,
+    "lon": 102.6907217,
+    "display_name": "丛林, 甘洛县 ꇤꇉꑤ, 凉山彝族自治州 ꆃꎭꆈꌠꊨꏦꏱꅉꍏ, 四川省, 616800, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "东厂": {
+    "lat": 21.7994414,
+    "lon": 112.5974071,
+    "display_name": "东厂, 江门市, 广东省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "东厂暗牢": {
+    "lat": 28.7047041,
+    "lon": 113.5852433,
+    "display_name": "兰橑岸, 坪上社区, 汉昌街道, 平江县, 岳阳市, 湖南省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "乡下": {
+    "lat": 24.28802,
+    "lon": 120.79154,
+    "display_name": "香下, 東勢區, 臺中市, 422, 臺灣",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "京郊": {
+    "lat": -16.5584668,
+    "lon": -68.6719113,
+    "display_name": "Centro Espiritual y Político de la Cultura Tiahuanacu, Calle General Gamez, Tiawanacu, Tiahuanacu, Ingavi, La Paz, Bolivia",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "兵部": {
+    "lat": 25.043372,
+    "lon": 121.5226893,
+    "display_name": "衛生福利部疾病管制署, 6, 林森南路, 幸福里, 中正區, 華山, 臺北市, 100008, 臺灣",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "南疆": {
+    "lat": 29.2598952,
+    "lon": 114.2687624,
+    "display_name": "南疆, 修水县, 九江市, 江西省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "嘉兴府": {
+    "lat": 30.7041557,
+    "lon": 120.6861768,
+    "display_name": "嘉兴南湖机场, 洪福路, 洪合镇, 秀洲区, 嘉兴市, 浙江省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "城墙": {
+    "lat": 42.0704735,
+    "lon": 126.5970864,
+    "display_name": "城墙街道, 江源区, 白山市, 吉林省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "大狱": {
+    "lat": 35.4659065,
+    "lon": 136.273765,
+    "display_name": "大獄, 野瀬下山田線, 小谷上山田町, 長浜市, 滋賀県, 526-0277, 日本",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "大理寺": {
+    "lat": 31.6670157,
+    "lon": 117.8788663,
+    "display_name": "大力寺, 力寺村, 半汤街道, 巢湖市, 合肥市, 安徽省, 238000, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "太和门大殿": {
+    "lat": 25.682743,
+    "lon": 100.1597071,
+    "display_name": "亚星大饭店, 大凤路, 一塔小区, 大纸坊, 大理镇, 大理市, 大理白族自治州, 云南省, 671000, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "安南": {
+    "lat": 27.6081533,
+    "lon": 100.0189973,
+    "display_name": "安南, 三坝纳西族乡, 香格里拉市 སེམས་ཀྱི་ཉི་ཟླ་གྲོང་ཁྱེར།, 迪庆藏族自治州 བདེ་ཆེན་བོད་རིགས་རང་སྐྱོང་ཁུལ།, 云南省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "屋内": {
+    "lat": 30.5511189,
+    "lon": 118.1787944,
+    "display_name": "坞内, 桃花潭镇, 泾县, 宣城市, 安徽省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "山脚": {
+    "lat": 28.9343024,
+    "lon": 119.4871009,
+    "display_name": "山脚, 金华市, 浙江省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "文渊阁": {
+    "lat": 39.9147741,
+    "lon": 116.393051,
+    "display_name": "文渊阁, 半壁桥, 智德社区, 东华门街道, 首都功能核心区, 东城区, 北京市, 100010, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "朝堂": {
+    "lat": 31.2345849,
+    "lon": 121.4715919,
+    "display_name": "潮堂, 西藏中路, 黄浦区, 上海市, 200001, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "杭城": {
+    "lat": 25.9543656,
+    "lon": 119.4856465,
+    "display_name": "航城, G316, 营前街道, 长乐区, 福州市, 福建省, 350200, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "杭州府": {
+    "lat": 30.2460562,
+    "lon": 120.1781999,
+    "display_name": "杭州站, 1号, 环城东路, 长明寺巷社区, 小营街道, 上城区, 杭州市, 浙江省, 310009, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "江南": {
+    "lat": 22.7848277,
+    "lon": 108.2691257,
+    "display_name": "江南区, 南宁市, 广西壮族自治区, 530031, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "江南府": {
+    "lat": 39.8249404,
+    "lon": 116.4632514,
+    "display_name": "江南府, 小红门乡, 朝阳区, 北京市, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "江西": {
+    "lat": 28.0,
+    "lon": 116.0,
+    "display_name": "江西省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "秦淮": {
+    "lat": 32.0411462,
+    "lon": 118.7896033,
+    "display_name": "秦淮区, 南京市, 江苏省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "翰林院": {
+    "lat": 28.8045694,
+    "lon": 104.6167781,
+    "display_name": "翰林院, 翠屏区, 宜宾市, 四川省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "西厂": {
+    "lat": 21.8011149,
+    "lon": 112.595948,
+    "display_name": "西厂, 江门市, 广东省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "西域": {
+    "lat": 42.4804953,
+    "lon": 85.4633464,
+    "display_name": "新疆维吾尔自治区 شىنجاڭ ئۇيغۇر ئاپتونوم رايونی, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "香山寺": {
+    "lat": 34.5558274,
+    "lon": 112.4739141,
+    "display_name": "香山寺, 龙门大桥, 河东社区, 龙门石窟街道, 洛龙区, 洛阳市, 河南省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "太医院": {
+    "lat": 39.9163394,
+    "lon": 116.3948735,
+    "display_name": "太医院, 故宫东门外, 智德社区, 东华门街道, 首都功能核心区, 东城区, 北京市, 100010, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "太和门": {
+    "lat": 39.9139591,
+    "lon": 116.3908948,
+    "display_name": "太和门, 内金水桥, 智德社区, 东华门街道, 首都功能核心区, 东城区, 北京市, 100010, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "废弃营帐": {
+    "lat": 33.8316229,
+    "lon": 108.5825855,
+    "display_name": "废弃木屋, 鄠菜路, 营盘, 鄠邑区, 西安市, 陕西省, 中国",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "矮榻": {
+    "lat": 54.5859836,
+    "lon": -6.9591554,
+    "display_name": "Northern Ireland / Tuaisceart Éireann, United Kingdom",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "行宫深山里": {
+    "lat": 35.2129918,
+    "lon": 136.8550037,
+    "display_name": "尾張星の宮, 名古屋祖父江線, 助七芳花, 清須市, 愛知県, 452-0901, 日本",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "西山": {
+    "lat": 37.448673,
+    "lon": 138.642702,
+    "display_name": "西山, 国道116号, 西山町黒部, 柏崎市, 新潟県, 日本",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "京中": {
+    "lat": 34.6699368,
+    "lon": 135.828682,
+    "display_name": "京終, 京終停車場薬師寺線, 西木辻町, 南京終町一丁目, 奈良市, 奈良県, 630-8141, 日本",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "京城": {
+    "lat": 50.6113049,
+    "lon": -2.4535373,
+    "display_name": "京城 Peking Town, 61, The Esplanade, Rodwell, Weymouth, Dorset, England, DT4 8DE, United Kingdom",
+    "provider": "nominatim",
+    "confidence": 0.6
+  },
+  "外面": {
+    "lat": 36.32381,
+    "lon": 126.72037,
+    "display_name": "외산면, 부여군, 충청남도, 33104, 대한민국",
+    "provider": "nominatim",
+    "confidence": 0.6
+  }
+}

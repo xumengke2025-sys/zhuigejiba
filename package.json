@@ -1,10 +1,10 @@
 {
-  "name": "wannian",
+  "name": "silverfish",
   "version": "0.1.0",
-  "description": "万年 - 命理推演系统",
+  "description": "衣鱼 (Silverfish) - 小说人物关系解析系统",
   "scripts": {
     "setup:frontend": "npm install --registry=https://registry.npmmirror.com && cd frontend && npm install --registry=https://registry.npmmirror.com",
-    "setup:backend": "cd backend && python -m venv .venv && .\\.venv\\Scripts\\pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/",
+    "setup:backend": "cd backend && python -m venv .venv && .\\.venv\\Scripts\\python -m pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/",
     "setup": "npm run setup:frontend && npm run setup:backend",
     "dev": "concurrently -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run backend\" \"npm run frontend\"",
     "backend": "cd backend && .\\.venv\\Scripts\\python run.py",

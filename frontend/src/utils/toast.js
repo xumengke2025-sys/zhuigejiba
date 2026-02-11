@@ -77,7 +77,7 @@ const toast = {
       type: 'info',
       message,
       duration: 0,
-      closable: false
+      closable: true
     })
     // 返回关闭函数
     return () => {

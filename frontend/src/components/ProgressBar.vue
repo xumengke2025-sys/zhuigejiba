@@ -280,7 +280,7 @@ const formatTime = (seconds) => {
 .progress-percent {
   font-weight: 600;
   color: #1677ff;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .progress-completed .progress-percent {

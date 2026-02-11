@@ -2,10 +2,8 @@
 业务服务模块
 """
 
-from .fortune_service import FortuneService
-from .fortune_aggregator import FortuneAggregator
+from .trace_service import TraceService
 
 __all__ = [
-    'FortuneService',
-    'FortuneAggregator'
+    'TraceService'
 ]

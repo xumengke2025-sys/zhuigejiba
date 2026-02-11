@@ -20,11 +20,14 @@ class Config:
     """Flask配置类"""
     
     # Flask配置
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'wannian-secret-key')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'silverfish-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
     
     # JSON配置 - 禁用ASCII转义，让中文直接显示（而不是 \uXXXX 格式）
     JSON_AS_ASCII = False
+    
+    # 最大上传限制 (32MB)
+    MAX_CONTENT_LENGTH = 32 * 1024 * 1024
     
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY')

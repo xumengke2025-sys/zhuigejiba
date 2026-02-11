@@ -4,6 +4,6 @@ API路由模块
 
 from flask import Blueprint
 
-fortune_bp = Blueprint('fortune', __name__)
+trace_bp = Blueprint('trace', __name__)
 
-from . import fortune  # noqa: E402, F401
+from . import trace  # noqa: E402, F401

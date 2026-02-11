@@ -60,10 +60,10 @@ def setup_logger(name: str = 'wannian', level: int = logging.DEBUG) -> logging.L
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(detailed_formatter)
     
-    # 2. 控制台处理器 - 简洁日志（INFO及以上）
+    # 2. 控制台处理器 - 简洁日志（DEBUG及以上，为了调试）
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(simple_formatter)
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(detailed_formatter)
     
     # 添加处理器
     logger.addHandler(file_handler)

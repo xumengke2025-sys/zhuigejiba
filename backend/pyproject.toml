@@ -1,11 +1,11 @@
 [project]
-name = "wannian-backend"
+name = "silverfish-backend"
 version = "0.1.0"
-description = "万年 (Wannian) - 命理推演与命运图谱系统"
+description = "衣鱼 (Silverfish) - 小说人物关系解析系统"
 requires-python = ">=3.10,<3.12"
 license = { text = "AGPL-3.0" }
 authors = [
-    { name = "Wannian Team" }
+    { name = "Silverfish Team" }
 ]
 
 dependencies = [

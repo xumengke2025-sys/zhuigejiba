@@ -17,29 +17,30 @@ import Toast from './components/Toast.vue'
 }
 
 #app {
-  font-family: 'JetBrains Mono', 'Space Grotesk', monospace;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #000000;
-  background-color: #ffffff;
+  color: #E0E0E0;
+  background-color: #000000;
 }
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #0D0D0F;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000000;
+  background: #333;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: #555;
 }
 
 /* 全局按钮样式 */
