@@ -48,7 +48,7 @@
 cd backend
 python -m venv .venv          # 创建虚拟环境
 .\.venv\Scripts\activate      # 激活环境
-pip install -r requirements.txt # 安装所有 Python 插件
+pip install -r requirements.txt # 安装所有 Python 插件（确保无报错）
 cd ..
 ```
 
@@ -69,12 +69,27 @@ LLM_BASE_URL=https://api.deepseek.com # 或者你使用的中转地址
 LLM_MODEL_NAME=deepseek-chat
 ```
 
-#### 4. 启动运行
-以后每次使用，只需运行：
+#### 4. 启动运行（重要！）
+本项目包含两个部分（后端大脑 + 前端界面），**必须同时启动两个窗口**才能正常使用。
+
+**窗口 1：启动后端**
+打开一个终端窗口，执行：
 ```bash
-npm run dev
+cd backend
+.\.venv\Scripts\activate      # 激活虚拟环境
+python run.py                 # 启动服务
 ```
-看到屏幕显示 `Local: http://localhost:5173/` 后，按住 `Ctrl` 点击链接，或手动复制到浏览器打开即可！
+*成功标志：看到 `Service running at: http://127.0.0.1:5002`*
+
+**窗口 2：启动前端**
+打开另一个终端窗口，执行：
+```bash
+cd frontend
+npm run dev                   # 启动界面
+```
+*成功标志：看到 `Local: http://localhost:5173/`*
+
+最后，在浏览器打开 `http://localhost:5173/` 即可使用！
 
 ---
 
