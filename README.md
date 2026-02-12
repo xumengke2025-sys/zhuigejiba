@@ -33,33 +33,14 @@
 
 ### 🚀 怎么用？（小白保姆级教程）
 
-为了保证项目轻量，我们上传时去掉了庞大的运行库。**第一次使用**需要按照以下步骤“一键恢复”：
+为了保证项目轻量，我们上传时去掉了庞大的运行库。**第一次使用**需要按照以下步骤操作：
 
 #### 1. 环境准备
 如果你的电脑还没装过运行环境，请先下载并安装：
 *   **Python (3.10+)**: [官网下载地址](https://www.python.org/downloads/)（安装时请务必勾选 **"Add Python to PATH"**）
 *   **Node.js**: [官网下载地址](https://nodejs.org/)（下载 LTS 长期支持版即可）
 
-#### 2. 一键恢复环境 (只需运行一次)
-下载本项目解压后，在文件夹地址栏输入 `cmd` 并回车，在弹出的黑色窗口中分别执行：
-
-**恢复后端环境：**
-```bash
-cd backend
-python -m venv .venv          # 创建虚拟环境
-.\.venv\Scripts\activate      # 激活环境
-pip install -r requirements.txt # 安装所有 Python 插件（确保无报错）
-cd ..
-```
-
-**恢复前端环境：**
-```bash
-cd frontend
-npm install                   # 安装所有前端插件
-cd ..
-```
-
-#### 3. 配置 AI 钥匙 (API Key)
+#### 2. 配置 AI 钥匙 (API Key)
 本项目需要 AI 才能理解小说内容：
 1.  找到 `.env.example` 文件，改名为 `.env`。
 2.  用记事本打开，填入你的 API Key：
@@ -69,27 +50,40 @@ LLM_BASE_URL=https://api.deepseek.com # 或者你使用的中转地址
 LLM_MODEL_NAME=deepseek-chat
 ```
 
-#### 4. 启动运行（重要！）
-本项目包含两个部分（后端大脑 + 前端界面），**必须同时启动两个窗口**才能正常使用。
+#### 3. 一键启动（Windows 用户推荐）
+双击项目根目录下的 **`start_all.bat`** 脚本。
+
+它会自动执行：
+1.  安装 Python 依赖（如果缺失）
+2.  安装 Node.js 依赖（如果缺失）
+3.  同时启动后端（5002端口）和前端（3002端口）
+
+*注意：启动过程中会弹出两个黑框窗口，请不要关闭它们。*
+*看到 `Service running at: http://127.0.0.1:5002` 和 `Local: http://localhost:3002/` 字样即表示启动成功。*
+
+最后，在浏览器打开 `http://localhost:3002/` 即可使用！
+
+---
+
+### 🔧 手动启动（Mac/Linux 用户或高级用户）
 
 **窗口 1：启动后端**
-打开一个终端窗口，执行：
 ```bash
 cd backend
-.\.venv\Scripts\activate      # 激活虚拟环境
+python -m venv .venv          # 创建虚拟环境（首次）
+source .venv/bin/activate     # 激活环境 (Windows: .\.venv\Scripts\activate)
+pip install -r requirements.txt # 安装依赖
 python run.py                 # 启动服务
 ```
 *成功标志：看到 `Service running at: http://127.0.0.1:5002`*
 
 **窗口 2：启动前端**
-打开另一个终端窗口，执行：
 ```bash
 cd frontend
+npm install                   # 安装依赖（首次）
 npm run dev                   # 启动界面
 ```
-*成功标志：看到 `Local: http://localhost:5173/`*
-
-最后，在浏览器打开 `http://localhost:5173/` 即可使用！
+*成功标志：看到 `Local: http://localhost:3002/`*
 
 ---
 
