@@ -61,7 +61,17 @@ def setup_logger(name: str = 'wannian', level: int = logging.DEBUG) -> logging.L
     file_handler.setFormatter(detailed_formatter)
     
     # 2. 控制台处理器 - 简洁日志（DEBUG及以上，为了调试）
-    console_handler = logging.StreamHandler()
+    import sys
+    console_stream = sys.stderr
+    
+    # Windows下尝试强制使用UTF-8输出，解决中文乱码或编码错误
+    if sys.platform == 'win32' and hasattr(console_stream, 'reconfigure'):
+        try:
+            console_stream.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
+    console_handler = logging.StreamHandler(console_stream)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(detailed_formatter)
     
